@@ -15,7 +15,7 @@ class AlarmController extends Controller
             ->orderBy('time')
             ->get();
 
-        return view('alarms.index', compact('alarms'));
+        return view('alarms.index_ios_v3', compact('alarms'));
     }
 
     public function create()
