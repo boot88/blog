@@ -6,10 +6,44 @@
 body{background:#f5f5f7;color:#000;margin:0}
 header,nav,.topbar{display:none!important}
 
-.header{display:flex;justify-content:space-between;align-items:center;padding:15px;background:#fff;font-size:20px}
-.btn{font-size:22px;cursor:pointer}
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:15px;
+  background:#fff;
+  font-size:18px;
+}
 
-.picker{display:flex;justify-content:center;gap:20px;margin:30px 0}
+.title{
+  font-weight:600;
+}
+
+.btn{
+  /*ont-size:22px;
+  cursor:pointer;
+  color:#111; /* ← чёрные */
+}
+
+.picker{
+  position:relative;
+  display:flex;
+  justify-content:center;
+  gap:20px;
+  margin:30px 0;
+}
+
+.center-line{
+  position:absolute;
+  top:50%;
+  left:0;
+  right:0;
+  height:40px;
+  margin-top:-20px;
+  border-top:1px solid #ccc;
+  border-bottom:1px solid #ccc;
+  pointer-events:none;
+}
 .col{height:200px;overflow-y:auto;scroll-snap-type:y mandatory}
 .col div{height:40px;display:flex;align-items:center;justify-content:center;scroll-snap-align:center;color:#000}
 
@@ -43,6 +77,8 @@ header,nav,.topbar{display:none!important}
 <div class="picker">
   <div class="col" id="h"></div>
   <div class="col" id="m"></div>
+  
+  <div class="center-line"></div>
 </div>
 
 <div class="block" onclick="openDays()">
@@ -120,27 +156,52 @@ function fill(){
   hEl.innerHTML = '';
   mEl.innerHTML = '';
 
-  for(let i=0;i<24;i++){
-    hEl.innerHTML += `<div>${String(i).padStart(2,'0')}</div>`;
+  // Делаем повторение (для бесконечности)
+  for(let k=0;k<3;k++){
+    for(let i=0;i<24;i++){
+      hEl.innerHTML += `<div>${String(i).padStart(2,'0')}</div>`;
+    }
   }
-  for(let i=0;i<60;i++){
-    mEl.innerHTML += `<div>${String(i).padStart(2,'0')}</div>`;
+
+  for(let k=0;k<3;k++){
+    for(let i=0;i<60;i++){
+      mEl.innerHTML += `<div>${String(i).padStart(2,'0')}</div>`;
+    }
   }
 
   const [hh, mm] = alarm.time.split(':').map(Number);
-  hEl.scrollTop = hh * 40;
-  mEl.scrollTop = mm * 40;
+
+  // ставим в СЕРЕДИНУ
+  hEl.scrollTop = (24 + hh) * 40;
+  mEl.scrollTop = (60 + mm) * 40;
+
+  setupInfiniteScroll(hEl, 24);
+  setupInfiniteScroll(mEl, 60);
 }
 fill();
+
+function setupInfiniteScroll(el, count){
+  el.addEventListener('scroll', () => {
+    const itemHeight = 40;
+    const total = count * itemHeight;
+
+    if (el.scrollTop < total * 0.5){
+      el.scrollTop += total;
+    }
+
+    if (el.scrollTop > total * 2){
+      el.scrollTop -= total;
+    }
+  });
+}
+
 
 function getTime(){
   const hEl = document.getElementById('h');
   const mEl = document.getElementById('m');
-  let hi = Math.round(hEl.scrollTop / 40);
-  let mi = Math.round(mEl.scrollTop / 40);
 
-  hi = Math.max(0, Math.min(23, hi));
-  mi = Math.max(0, Math.min(59, mi));
+  let hi = Math.round(hEl.scrollTop / 40) % 24;
+  let mi = Math.round(mEl.scrollTop / 40) % 60;
 
   return `${String(hi).padStart(2,'0')}:${String(mi).padStart(2,'0')}`;
 }
