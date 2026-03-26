@@ -53,12 +53,8 @@ header,nav,.topbar{display:none!important}
   <div class="row"><span>Звук</span><span>по умолчанию</span></div>
 </div>
 
-<div class="block" onclick="editNote()">
-  <div class="row"><span>Описание</span><span id="noteText">{{ $alarm->note ?: '—' }}</span></div>
-</div>
-
-<div class="block">
-  <div class="row"><span>Название</span><span id="titleText">{{ $alarm->title }}</span></div>
+<div class="block" onclick="editDescription()">
+  <div class="row"><span>Описание</span><span id="descriptionText">{{ $alarm->title }}</span></div>
 </div>
 
 <div class="block">
@@ -75,11 +71,28 @@ header,nav,.topbar{display:none!important}
   <div class="modal-content">
     <div>Дни недели</div>
     <div id="daysList"></div>
-    <button onclick="closeDays()">OK</button>
+    <button type="button" onclick="closeDays()">OK</button>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
+
+<form id="saveForm" method="POST" action="{{ route('alarms.update', $alarm) }}" style="display:none;">
+  @csrf
+  @method('PUT')
+  <input type="hidden" name="title" id="formTitle" value="{{ $alarm->title }}">
+  <input type="hidden" name="note" id="formNote" value="{{ $alarm->note ?? '' }}">
+  <input type="hidden" name="time" id="formTime" value="{{ substr($alarm->time, 0, 5) }}">
+  <input type="hidden" name="enabled" id="formEnabled" value="{{ $alarm->enabled ? 1 : 0 }}">
+  @if($alarm->date)
+    <input type="hidden" name="date" id="formDate" value="{{ $alarm->date->format('Y-m-d') }}">
+  @endif
+</form>
+
+<form id="deleteForm" method="POST" action="{{ route('alarms.destroy', $alarm) }}" style="display:none;">
+  @csrf
+  @method('DELETE')
+</form>
 
 <script>
 const alarm = {
@@ -97,7 +110,7 @@ function showToast(text){
   const toast = document.getElementById('toast');
   toast.innerText = text;
   toast.style.display = 'block';
-  setTimeout(() => toast.style.display = 'none', 1800);
+  setTimeout(() => toast.style.display = 'none', 1500);
 }
 
 function fill(){
@@ -133,45 +146,15 @@ function getTime(){
 }
 
 function save(){
-  const body = new URLSearchParams();
-  body.append('_method', 'PUT');
-  body.append('title', alarm.title);
-  body.append('note', alarm.note ?? '');
-  body.append('time', getTime());
-  body.append('enabled', alarm.enabled ? '1' : '0');
+  document.getElementById('formTitle').value = alarm.title;
+  document.getElementById('formNote').value = alarm.note ?? '';
+  document.getElementById('formTime').value = getTime();
+  document.getElementById('formEnabled').value = alarm.enabled ? '1' : '0';
 
-  if (alarm.date) {
-    body.append('date', alarm.date);
-  }
-
-  fetch(`/alarms/${alarm.id}`, {
-    method: 'POST',
-    headers: {
-      'X-CSRF-TOKEN': '{{ csrf_token() }}',
-      'Accept': 'application/json',
-      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-    },
-    body: body.toString()
-  })
-  .then(async (r) => {
-    const text = await r.text();
-    let data = {};
-    try { data = text ? JSON.parse(text) : {}; } catch(e) {}
-
-    if (!r.ok) {
-      throw new Error(data.message || 'Не удалось сохранить будильник');
-    }
-
-    return data;
-  })
-  .then(() => {
-    showToast('Сохранено');
-    setTimeout(() => location.href = '/alarms', 500);
-  })
-  .catch((e) => {
-    console.error(e);
-    alert(e.message || 'Ошибка при сохранении');
-  });
+  showToast('Сохранение...');
+  setTimeout(() => {
+    document.getElementById('saveForm').submit();
+  }, 150);
 }
 
 function closePage(){
@@ -206,48 +189,21 @@ function openSound(){
   alert('звуки позже подключим');
 }
 
-function editNote(){
-  const t = prompt('Описание', alarm.note ?? '');
+function editDescription(){
+  const t = prompt('Описание', alarm.title ?? '');
   if (t === null) return;
 
-  alarm.note = t;
-  document.getElementById('noteText').innerText = t || '—';
+  alarm.title = t;
+  document.getElementById('descriptionText').innerText = t || '—';
 }
 
 function del(){
   if (!confirm('Удалить?')) return;
 
-  const body = new URLSearchParams();
-  body.append('_method', 'DELETE');
-
-  fetch(`/alarms/${alarm.id}`, {
-    method: 'POST',
-    headers: {
-      'X-CSRF-TOKEN': '{{ csrf_token() }}',
-      'Accept': 'application/json',
-      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-    },
-    body: body.toString()
-  })
-  .then(async (r) => {
-    const text = await r.text();
-    let data = {};
-    try { data = text ? JSON.parse(text) : {}; } catch(e) {}
-
-    if (!r.ok) {
-      throw new Error(data.message || 'Не удалось удалить будильник');
-    }
-
-    return data;
-  })
-  .then(() => {
-    showToast('Удалено');
-    setTimeout(() => location.href = '/alarms', 400);
-  })
-  .catch((e) => {
-    console.error(e);
-    alert(e.message || 'Ошибка при удалении');
-  });
+  showToast('Удаление...');
+  setTimeout(() => {
+    document.getElementById('deleteForm').submit();
+  }, 150);
 }
 </script>
 @endsection
