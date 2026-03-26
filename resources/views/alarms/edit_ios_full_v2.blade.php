@@ -337,16 +337,17 @@ function handleClick(id, e){
   const state = pickers[id];
   if(state.dragging) return;
 
-  const rect = state.el.getBoundingClientRect();
-  const y = e.clientY - rect.top;
+  const item = e.target.closest('.item');
+  if(!item) return;
 
-  const centerY = state.el.clientHeight / 2;
+  const items = [...state.inner.children];
+  const clickedIndex = items.indexOf(item);
 
-  const deltaPx = y - centerY;
+  if(clickedIndex === -1) return;
 
-  state.offsetY += deltaPx;
+  state.index = clickedIndex;
 
-  snapToNearest(state);
+  renderPickerState(state, true);
 }
 
 function getPickerValue(id){
