@@ -1,58 +1,117 @@
 @extends('layouts.app')
 @php $noHeader = true; @endphp
-@section('title','Будильник')
+@section('title', 'Изменить будильник')
 @section('content')
 <style>
-body{background:#f5f5f7;color:#000;margin:0}
-header,nav,.topbar{display:none!important}
+body{
+  background:#f5f5f7;
+  color:#000;
+  margin:0;
+}
+header,nav,.topbar{display:none!important;}
 
 .header{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  padding:15px;
+  padding:15px 18px;
   background:#fff;
   font-size:18px;
+  border-bottom:1px solid #ececec;
 }
-
-.title{
+.header-title{
   font-weight:600;
+  text-align:center;
+  flex:1;
 }
-
-.btn{
-  /*ont-size:22px;
+.header-btn{
+  width:32px;
+  text-align:center;
+  font-size:24px;
+  line-height:1;
   cursor:pointer;
-  color:#111; /* ← чёрные */
+  color:#111;
+  user-select:none;
 }
 
 .picker{
   position:relative;
   display:flex;
   justify-content:center;
-  gap:20px;
-  margin:30px 0;
+  gap:18px;
+  margin:28px 0 18px;
 }
 
-.center-line{
+.col{
+  position:relative;
+  width:110px;
+  height:200px;
+  overflow:hidden;
+  user-select:none;
+  touch-action:none;
+  background:#fff;
+  border-radius:16px;
+}
+
+.col-inner{
   position:absolute;
-  top:50%;
   left:0;
   right:0;
-  height:40px;
-  margin-top:-20px;
-  border-top:1px solid #ccc;
-  border-bottom:1px solid #ccc;
-  pointer-events:none;
+  top:0;
+  will-change:transform;
 }
-.col{height:200px;overflow-y:auto;scroll-snap-type:y mandatory}
-.col div{height:40px;display:flex;align-items:center;justify-content:center;scroll-snap-align:center;color:#000}
 
-.block{background:#fff;margin:10px;border-radius:12px;padding:15px}
-.row{display:flex;justify-content:space-between;cursor:pointer}
-.row span{color:#000}
+.item{
+  height:40px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#111;
+  font-size:28px;
+  font-weight:400;
+}
 
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.3);display:none;align-items:center;justify-content:center}
-.modal-content{background:#fff;padding:20px;border-radius:12px;width:300px}
+.center-frame{
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  top:50%;
+  margin-top:-20px;
+  width:238px;
+  height:40px;
+  border-top:1px solid #cfcfcf;
+  border-bottom:1px solid #cfcfcf;
+  pointer-events:none;
+  border-radius:2px;
+}
+
+.block{
+  background:#fff;
+  margin:10px;
+  border-radius:12px;
+  padding:15px;
+}
+.row{
+  display:flex;
+  justify-content:space-between;
+  cursor:pointer;
+}
+.row span{color:#000;}
+
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.3);
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+.modal-content{
+  background:#fff;
+  padding:20px;
+  border-radius:12px;
+  width:300px;
+}
 
 .toast{
   position:fixed;
@@ -69,16 +128,15 @@ header,nav,.topbar{display:none!important}
 </style>
 
 <div class="header">
-  <div class="btn" onclick="closePage()">✕</div>
-  <div>Будильник</div>
-  <div class="btn" onclick="save()">✔</div>
+  <div class="header-btn" onclick="closePage()">✕</div>
+  <div class="header-title">Изменить будильник</div>
+  <div class="header-btn" onclick="save()">✔</div>
 </div>
 
 <div class="picker">
   <div class="col" id="h"></div>
   <div class="col" id="m"></div>
-  
-  <div class="center-line"></div>
+  <div class="center-frame"></div>
 </div>
 
 <div class="block" onclick="openDays()">
@@ -131,6 +189,11 @@ header,nav,.topbar{display:none!important}
 </form>
 
 <script>
+const ITEM_HEIGHT = 40;
+const VISIBLE_ROWS = 5;
+const CENTER_OFFSET = Math.floor(VISIBLE_ROWS / 2);
+const REPEAT_COUNT = 7;
+
 const alarm = {
   id: {{ $alarm->id }},
   time: '{{ substr($alarm->time, 0, 5) }}',
@@ -142,6 +205,8 @@ const alarm = {
 
 let days = [1,1,1,1,1,1,1];
 
+const pickers = {};
+
 function showToast(text){
   const toast = document.getElementById('toast');
   toast.innerText = text;
@@ -149,62 +214,133 @@ function showToast(text){
   setTimeout(() => toast.style.display = 'none', 1500);
 }
 
-function fill(){
-  const hEl = document.getElementById('h');
-  const mEl = document.getElementById('m');
-
-  hEl.innerHTML = '';
-  mEl.innerHTML = '';
-
-  // Делаем повторение (для бесконечности)
-  for(let k=0;k<3;k++){
-    for(let i=0;i<24;i++){
-      hEl.innerHTML += `<div>${String(i).padStart(2,'0')}</div>`;
-    }
-  }
-
-  for(let k=0;k<3;k++){
-    for(let i=0;i<60;i++){
-      mEl.innerHTML += `<div>${String(i).padStart(2,'0')}</div>`;
-    }
-  }
-
-  const [hh, mm] = alarm.time.split(':').map(Number);
-
-  // ставим в СЕРЕДИНУ
-  hEl.scrollTop = (24 + hh) * 40;
-  mEl.scrollTop = (60 + mm) * 40;
-
-  setupInfiniteScroll(hEl, 24);
-  setupInfiniteScroll(mEl, 60);
+function pad(n){
+  return String(n).padStart(2, '0');
 }
-fill();
 
-function setupInfiniteScroll(el, count){
-  el.addEventListener('scroll', () => {
-    const itemHeight = 40;
-    const total = count * itemHeight;
+function buildPicker(el, max, initialValue){
+  const inner = document.createElement('div');
+  inner.className = 'col-inner';
 
-    if (el.scrollTop < total * 0.5){
-      el.scrollTop += total;
+  for(let r = 0; r < REPEAT_COUNT; r++){
+    for(let i = 0; i < max; i++){
+      const item = document.createElement('div');
+      item.className = 'item';
+      item.dataset.value = i;
+      item.textContent = pad(i);
+      inner.appendChild(item);
     }
+  }
 
-    if (el.scrollTop > total * 2){
-      el.scrollTop -= total;
-    }
+  el.innerHTML = '';
+  el.appendChild(inner);
+
+  const middleCycle = Math.floor(REPEAT_COUNT / 2);
+  let index = middleCycle * max + initialValue;
+
+  pickers[el.id] = {
+    el,
+    inner,
+    max,
+    index,
+    startY: 0,
+    startIndex: 0,
+    dragging: false
+  };
+
+  renderPicker(el.id);
+
+  el.addEventListener('mousedown', (e) => startDrag(el.id, e.clientY));
+  window.addEventListener('mousemove', (e) => moveDrag(el.id, e.clientY));
+  window.addEventListener('mouseup', () => endDrag(el.id));
+
+  el.addEventListener('click', (e) => handleClick(el.id, e));
+}
+
+function normalizeIndex(state){
+  const middleCycle = Math.floor(REPEAT_COUNT / 2);
+  const min = state.max;
+  const max = (REPEAT_COUNT - 2) * state.max;
+
+  if(state.index < min || state.index >= max){
+    const v = ((state.index % state.max) + state.max) % state.max;
+    state.index = middleCycle * state.max + v;
+  }
+}
+
+function renderPicker(id, smooth = false){
+  const state = pickers[id];
+  normalizeIndex(state);
+
+  const targetY = -(state.index - CENTER_OFFSET) * ITEM_HEIGHT;
+  state.inner.style.transition = smooth ? 'transform 180ms ease' : 'none';
+  state.inner.style.transform = `translateY(${targetY}px)`;
+
+  [...state.inner.children].forEach((node, idx) => {
+    const isSelected = idx === state.index;
+    node.style.opacity = isSelected ? '1' : '0.45';
+    node.style.fontWeight = isSelected ? '600' : '400';
+    node.style.transform = isSelected ? 'scale(1.02)' : 'scale(1)';
   });
 }
 
+function startDrag(id, clientY){
+  const state = pickers[id];
+  state.dragging = true;
+  state.startY = clientY;
+  state.startIndex = state.index;
+  state.inner.style.transition = 'none';
+}
+
+function moveDrag(id, clientY){
+  const state = pickers[id];
+  if(!state.dragging) return;
+
+  const delta = clientY - state.startY;
+  const step = Math.round(delta / ITEM_HEIGHT);
+
+  state.index = state.startIndex - step;
+  renderPicker(id, false);
+}
+
+function endDrag(id){
+  const state = pickers[id];
+  if(!state.dragging) return;
+  state.dragging = false;
+  renderPicker(id, true);
+}
+
+function handleClick(id, e){
+  const state = pickers[id];
+  if(state.dragging) return;
+
+  const rect = state.el.getBoundingClientRect();
+  const y = e.clientY - rect.top;
+  const clickedRow = Math.floor(y / ITEM_HEIGHT);
+  const deltaRows = clickedRow - CENTER_OFFSET;
+
+  if(deltaRows === 0) return;
+
+  state.index += deltaRows;
+  renderPicker(id, true);
+}
+
+function getPickerValue(id){
+  const state = pickers[id];
+  const value = ((state.index % state.max) + state.max) % state.max;
+  return pad(value);
+}
 
 function getTime(){
-  const hEl = document.getElementById('h');
-  const mEl = document.getElementById('m');
-
-  let hi = Math.round(hEl.scrollTop / 40) % 24;
-  let mi = Math.round(mEl.scrollTop / 40) % 60;
-
-  return `${String(hi).padStart(2,'0')}:${String(mi).padStart(2,'0')}`;
+  return `${getPickerValue('h')}:${getPickerValue('m')}`;
 }
+
+function fill(){
+  const [hh, mm] = alarm.time.split(':').map(Number);
+  buildPicker(document.getElementById('h'), 24, hh);
+  buildPicker(document.getElementById('m'), 60, mm);
+}
+fill();
 
 function save(){
   document.getElementById('formTitle').value = alarm.title;
@@ -213,9 +349,7 @@ function save(){
   document.getElementById('formEnabled').value = alarm.enabled ? '1' : '0';
 
   showToast('Сохранение...');
-  setTimeout(() => {
-    document.getElementById('saveForm').submit();
-  }, 150);
+  setTimeout(() => document.getElementById('saveForm').submit(), 150);
 }
 
 function closePage(){
@@ -262,9 +396,7 @@ function del(){
   if (!confirm('Удалить?')) return;
 
   showToast('Удаление...');
-  setTimeout(() => {
-    document.getElementById('deleteForm').submit();
-  }, 150);
+  setTimeout(() => document.getElementById('deleteForm').submit(), 150);
 }
 </script>
 @endsection
