@@ -259,6 +259,8 @@ function buildPicker(el, max, initialValue){
   //state.offsetY = -(state.index - CENTER_OFFSET) * ITEM_HEIGHT;
   state.offsetY = -(state.index - CENTER_OFFSET) * ITEM_HEIGHT;
   
+  pickers[el.id] = state;
+  
 }
 
 function normalizeIndex(state){
@@ -423,5 +425,9 @@ function del(){
   showToast('Удаление...');
   setTimeout(() => document.getElementById('deleteForm').submit(), 150);
 }
+
+console.log(pickers);
+document.getElementById('m').style.background = 'red';
+
 </script>
 @endsection
