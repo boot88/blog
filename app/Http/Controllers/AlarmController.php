@@ -31,7 +31,10 @@ class AlarmController extends Controller
             'date' => ['nullable','date'],      // null = ежедневно
             'time' => ['required','date_format:H:i'],
             'enabled' => ['nullable','boolean'],
+            'weekdays' => ['nullable','array'],
         ]);
+        
+        $data['weekdays'] = $request->input('weekdays', null);
 
         $data['enabled'] = (bool)($data['enabled'] ?? false);
         $data['timezone'] = config('app.timezone');
@@ -54,7 +57,10 @@ class AlarmController extends Controller
         'date' => ['nullable','date'],
         'time' => ['required','date_format:H:i'],
         'enabled' => ['nullable','boolean'],
+        'weekdays' => ['nullable','array'],
     ]);
+    
+    $data['weekdays'] = $request->input('weekdays', null);
 
     $data['enabled'] = array_key_exists('enabled', $data)
         ? (bool)$data['enabled']

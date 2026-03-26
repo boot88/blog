@@ -302,6 +302,25 @@ const alarm = {
   date: @json(optional($alarm->date)->format('Y-m-d'))
 };
 
+document.getElementById('formTime').value = getTime();
+
+const body = document.getElementById('saveForm');
+
+// 👇 добавляем
+let weekdaysInput = document.getElementById('formWeekdays');
+if(!weekdaysInput){
+  weekdaysInput = document.createElement('input');
+  weekdaysInput.type = 'hidden';
+  weekdaysInput.name = 'weekdays';
+  weekdaysInput.id = 'formWeekdays';
+  body.appendChild(weekdaysInput);
+}
+
+weekdaysInput.value = JSON.stringify(days);
+
+
+let days = @json($alarm->weekdays ?? [1,1,1,1,1,1,1]);
+
 const dayNames = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 
 let days = [1,1,1,1,1,1,1]; // по умолчанию ежедневно
@@ -493,6 +512,8 @@ function save(){
 
   showToast('Сохранение...');
   setTimeout(() => document.getElementById('saveForm').submit(), 150);
+  
+  body.append('weekdays', JSON.stringify(days));
 }
 
 function closePage(){
