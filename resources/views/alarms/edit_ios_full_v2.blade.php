@@ -319,11 +319,11 @@ if(!weekdaysInput){
 weekdaysInput.value = JSON.stringify(days);
 
 
-let days = @json($alarm->weekdays ?? [1,1,1,1,1,1,1]);
+let days = @json($alarm->weekdays) || [1,1,1,1,1,1,1];
 
 const dayNames = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 
-let days = [1,1,1,1,1,1,1]; // по умолчанию ежедневно
+//let days = [1,1,1,1,1,1,1]; // по умолчанию ежедневно
 let tempDays = [...days];
 
 const pickers = {};
