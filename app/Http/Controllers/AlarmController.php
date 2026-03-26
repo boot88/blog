@@ -73,15 +73,16 @@ class AlarmController extends Controller
     return redirect()->route('alarms.index');
 }
 
-    public function destroy(Request $request, Alarm $alarm)
+    public function destroy(Alarm $alarm)
 {
     $alarm->delete();
 
-    if ($request->expectsJson()) {
+    if (request()->expectsJson()) {
         return response()->json(['ok' => true]);
     }
 
-    return redirect()->route('alarms.index');
+    return redirect()->route('alarms.index')
+        ->with('ok', 'Будильник удалён.');
 }
 
     /**
