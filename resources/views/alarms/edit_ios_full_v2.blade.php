@@ -66,11 +66,22 @@ return `${String(hi).padStart(2,'0')}:${String(mi).padStart(2,'0')}`;
 }
 
 function save(){
-fetch(`/alarms/${alarm.id}`,{
-method:'POST',
-headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}','Content-Type':'application/json'},
-body:JSON.stringify({_method:'PUT',time:getTime(),title:alarm.title})
-}).then(()=>location.href='/alarms');
+  fetch(`/alarms/${alarm.id}`, {
+    method: 'PUT',
+    headers: {
+      'X-CSRF-TOKEN': '{{ csrf_token() }}',
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify({
+      time: getTime(),
+      title: alarm.title,
+      note: '',
+      enabled: true
+    })
+  })
+  .then(r => r.json())
+  .then(() => location.href = '/alarms');
 }
 
 function closePage(){history.back()}
@@ -87,6 +98,15 @@ function toggleDay(i){days[i]=!days[i];renderDays()}
 
 function openSound(){alert('звуки позже подключим')}
 function editTitle(){let t=prompt('Описание',alarm.title);if(t)alarm.title=t;titleText.innerText=t}
-function del(){if(confirm('Удалить?')) fetch(`/alarms/${alarm.id}`,{method:'POST',headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}'},body:new URLSearchParams({_method:'DELETE'})}).then(()=>location.href='/alarms')}
+function del(){
+  fetch(`/alarms/${alarm.id}`, {
+    method: 'DELETE',
+    headers: {
+      'X-CSRF-TOKEN': '{{ csrf_token() }}',
+      'Accept': 'application/json'
+    }
+  })
+  .then(() => location.href = '/alarms');
+}
 </script>
 @endsection

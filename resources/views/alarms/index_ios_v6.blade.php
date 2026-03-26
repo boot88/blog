@@ -154,6 +154,27 @@ function toggle(el,id){
   alarms = alarms.map(a=> a.id===id ? {...a, enabled: el.classList.contains('active')} : a);
 
   computeNextText(); // сразу пересчитать
+  
+  const text = document.getElementById('nextText').innerText;
+
+const toast = document.createElement('div');
+toast.innerText = text;
+toast.style = `
+position:fixed;
+bottom:20px;
+left:50%;
+transform:translateX(-50%);
+background:#000;
+color:#fff;
+padding:10px 20px;
+border-radius:20px;
+z-index:999;
+`;
+
+document.body.appendChild(toast);
+
+setTimeout(()=>toast.remove(),2000);
+  
 }
 
 function edit(id){ window.location='/alarms/'+id+'/edit'; }

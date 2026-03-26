@@ -42,6 +42,16 @@ class AlarmController_v2 extends Controller
         ]);
     }
 
+
+    public function destroy(Alarm $alarm)
+{
+    $alarm->delete();
+
+    return response()->json([
+        'ok' => true
+    ]);
+}
+
     public function store(Request $request)
     {
         $data = $request->validate([
