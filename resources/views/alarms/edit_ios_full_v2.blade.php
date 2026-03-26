@@ -232,35 +232,31 @@ function buildPicker(el, max, initialValue){
 
   el.innerHTML = '';
   el.appendChild(inner);
- 
-  
- 
-  const middleCycle = Math.floor(REPEAT_COUNT / 2);
-  let index = middleCycle * max + initialValue;
 
-  pickers[el.id] = {
+  const middleCycle = Math.floor(REPEAT_COUNT / 2);
+  const index = middleCycle * max + initialValue;
+
+  const state = {
     el,
     inner,
     max,
     index,
     startY: 0,
     startIndex: 0,
+    startOffset: 0,
+    offsetY: -(index - CENTER_OFFSET) * ITEM_HEIGHT,
     dragging: false
   };
 
-  renderPickerState(pickers[el.id], false);
+  pickers[el.id] = state;
+
+  renderPickerState(state, false);
 
   el.addEventListener('mousedown', (e) => startDrag(el.id, e.clientY));
   window.addEventListener('mousemove', (e) => moveDrag(el.id, e.clientY));
   window.addEventListener('mouseup', () => endDrag(el.id));
 
   el.addEventListener('click', (e) => handleClick(el.id, e));
-  
-  //state.offsetY = -(state.index - CENTER_OFFSET) * ITEM_HEIGHT;
-  state.offsetY = -(state.index - CENTER_OFFSET) * ITEM_HEIGHT;
-  
-  pickers[el.id] = state;
-  
 }
 
 function normalizeIndex(state){
@@ -337,6 +333,7 @@ function snapToNearest(state){
 
 function handleClick(id, e){
   const state = pickers[id];
+  if(!state) return;
   if(state.dragging) return;
 
   const item = e.target.closest('.item');
@@ -348,7 +345,6 @@ function handleClick(id, e){
   if(clickedIndex === -1) return;
 
   state.index = clickedIndex;
-
   renderPickerState(state, true);
 }
 
