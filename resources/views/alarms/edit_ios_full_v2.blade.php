@@ -123,6 +123,92 @@ header,nav,.topbar{display:none!important;}
   display:none;
   z-index:9999;
 }
+
+
+.modal{
+  position:fixed;
+  inset:0;
+  display:none;
+  z-index:999;
+}
+
+.modal-overlay{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,.4);
+}
+
+.modal-content.modern{
+  position:absolute;
+  left:50%;
+  bottom:0;
+  transform:translateX(-50%);
+  width:100%;
+  max-width:400px;
+  background:#fff;
+  border-radius:20px 20px 0 0;
+  padding:20px;
+}
+
+.modal-title{
+  font-weight:600;
+  margin-bottom:15px;
+}
+
+.days-list div{
+  display:flex;
+  justify-content:space-between;
+  padding:12px 0;
+  border-bottom:1px solid #eee;
+  cursor:pointer;
+}
+
+.checkbox{
+  width:20px;
+  height:20px;
+  border:2px solid #ccc;
+  border-radius:4px;
+}
+
+.checkbox.active{
+  background:#007aff;
+  border-color:#007aff;
+}
+
+.modal-actions{
+  display:flex;
+  justify-content:space-between;
+  margin-top:20px;
+}
+
+.btn-cancel{
+  background:none;
+  border:none;
+  color:#666;
+  font-size:16px;
+}
+
+.btn-ok{
+  background:#007aff;
+  color:#fff;
+  border:none;
+  padding:10px 20px;
+  border-radius:10px;
+}
+
+.delete-btn{
+  width:calc(100% - 20px);
+  margin:20px 10px;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  background:#ff3b30;
+  color:#fff;
+  font-size:16px;
+  cursor:pointer;
+}
+
+
 </style>
 
 <div class="header">
@@ -137,9 +223,15 @@ header,nav,.topbar{display:none!important;}
   <div class="center-frame"></div>
 </div>
 
-<div class="block" onclick="openDays()">
-  <div class="row"><span>Дни недели</span><span id="daysText">ежедневно</span></div>
+
+
+<div class="block" style="margin-top:20px;">
+  <div class="row" onclick="openDays()">
+    <span>Дни недели</span>
+    <span id="daysText">ежедневно</span>
+  </div>
 </div>
+
 
 <div class="block" onclick="openSound()">
   <div class="row"><span>Звук</span><span>по умолчанию</span></div>
@@ -149,21 +241,30 @@ header,nav,.topbar{display:none!important;}
   <div class="row"><span>Описание</span><span id="descriptionText">{{ $alarm->title }}</span></div>
 </div>
 
-<div class="block">
-  <div class="row"><span>Длительность</span><span>10 мин</span></div>
+<div class="block-group">
+  <div class="block">
+    <div class="row"><span>Длительность сигнала</span><span>10 мин</span></div>
+  </div>
+
+  <div class="block">
+    <div class="row"><span>Длительность паузы</span><span>10 мин ×3</span></div>
+  </div>
 </div>
 
-<div class="block">
-  <div class="row"><span>Пауза</span><span>10 мин ×3</span></div>
-</div>
-
-<div class="block" onclick="del()" style="color:red;text-align:center">Удалить</div>
+<button class="delete-btn" onclick="del()">Удалить</button>
 
 <div class="modal" id="daysModal">
-  <div class="modal-content">
-    <div>Дни недели</div>
-    <div id="daysList"></div>
-    <button type="button" onclick="closeDays()">OK</button>
+  <div class="modal-overlay" onclick="cancelDays()"></div>
+
+  <div class="modal-content modern">
+    <div class="modal-title">Дни недели</div>
+
+    <div id="daysList" class="days-list"></div>
+
+    <div class="modal-actions">
+      <button onclick="cancelDays()" class="btn-cancel">Отмена</button>
+      <button onclick="applyDays()" class="btn-ok">ОК</button>
+    </div>
   </div>
 </div>
 
@@ -201,7 +302,10 @@ const alarm = {
   date: @json(optional($alarm->date)->format('Y-m-d'))
 };
 
-let days = [1,1,1,1,1,1,1];
+const dayNames = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+
+let days = [1,1,1,1,1,1,1]; // по умолчанию ежедневно
+let tempDays = [...days];
 
 const pickers = {};
 
@@ -358,12 +462,28 @@ function getTime(){
   return `${getPickerValue('h')}:${getPickerValue('m')}`;
 }
 
+
+function updateDaysText(){
+  const el = document.getElementById('daysText');
+
+  const active = dayNames.filter((_, i) => days[i]);
+
+  if(active.length === 7){
+    el.innerText = 'ежедневно';
+  } else if(active.length === 0){
+    el.innerText = '—';
+  } else {
+    el.innerText = active.join(', ');
+  }
+}
+
 function fill(){
   const [hh, mm] = alarm.time.split(':').map(Number);
   buildPicker(document.getElementById('h'), 24, hh);
   buildPicker(document.getElementById('m'), 60, mm);
 }
 fill();
+updateDaysText();
 
 function save(){
   document.getElementById('formTitle').value = alarm.title;
@@ -380,28 +500,46 @@ function closePage(){
 }
 
 function openDays(){
-  document.getElementById('daysModal').style.display = 'flex';
+  tempDays = [...days];
+  document.getElementById('daysModal').style.display = 'block';
   renderDays();
+}
+
+function applyDays(){
+  days = [...tempDays];
+  updateDaysText();
+  document.getElementById('daysModal').style.display = 'none';
 }
 
 function closeDays(){
   document.getElementById('daysModal').style.display = 'none';
 }
 
+function cancelDays(){
+  document.getElementById('daysModal').style.display = 'none';
+}
+
 function renderDays(){
-  const names = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
   const list = document.getElementById('daysList');
   list.innerHTML = '';
 
-  names.forEach((n,i) => {
-    list.innerHTML += `<div onclick="toggleDay(${i})">${n} ${days[i] ? '✓' : ''}</div>`;
+  dayNames.forEach((name, i) => {
+    list.innerHTML += `
+      <div onclick="toggleDay(${i})">
+        <span>${name}</span>
+        <div class="checkbox ${tempDays[i] ? 'active' : ''}"></div>
+      </div>
+    `;
   });
 }
 
 function toggleDay(i){
-  days[i] = !days[i];
+  tempDays[i] = tempDays[i] ? 0 : 1;
   renderDays();
 }
+
+
+
 
 function openSound(){
   alert('звуки позже подключим');
@@ -423,7 +561,7 @@ function del(){
 }
 
 console.log(pickers);
-document.getElementById('m').style.background = 'red';
+//document.getElementById('m').style.background = 'red';
 
 </script>
 @endsection
