@@ -234,7 +234,9 @@ function buildPicker(el, max, initialValue){
 
   el.innerHTML = '';
   el.appendChild(inner);
-
+ 
+  
+ 
   const middleCycle = Math.floor(REPEAT_COUNT / 2);
   let index = middleCycle * max + initialValue;
 
@@ -248,13 +250,15 @@ function buildPicker(el, max, initialValue){
     dragging: false
   };
 
-  renderPicker(el.id);
+  renderPickerState(pickers[el.id], false);
 
   el.addEventListener('mousedown', (e) => startDrag(el.id, e.clientY));
   window.addEventListener('mousemove', (e) => moveDrag(el.id, e.clientY));
   window.addEventListener('mouseup', () => endDrag(el.id));
 
   el.addEventListener('click', (e) => handleClick(el.id, e));
+  
+  state.offsetY = -(state.index - CENTER_OFFSET) * ITEM_HEIGHT;
 }
 
 function normalizeIndex(state){
@@ -268,19 +272,22 @@ function normalizeIndex(state){
   }
 }
 
-function renderPicker(id, smooth = false){
-  const state = pickers[id];
+//renderPicker
+
+function renderPickerState(state, smooth = false){
   normalizeIndex(state);
 
-  const targetY = -(state.index - CENTER_OFFSET) * ITEM_HEIGHT;
+  const targetOffset = -(state.index - CENTER_OFFSET) * ITEM_HEIGHT;
+
+  state.offsetY = targetOffset;
+
   state.inner.style.transition = smooth ? 'transform 180ms ease' : 'none';
-  state.inner.style.transform = `translateY(${targetY}px)`;
+  state.inner.style.transform = `translateY(${targetOffset}px)`;
 
   [...state.inner.children].forEach((node, idx) => {
     const isSelected = idx === state.index;
-    node.style.opacity = isSelected ? '1' : '0.45';
+    node.style.opacity = isSelected ? '1' : '0.4';
     node.style.fontWeight = isSelected ? '600' : '400';
-    node.style.transform = isSelected ? 'scale(1.02)' : 'scale(1)';
   });
 }
 
@@ -288,7 +295,7 @@ function startDrag(id, clientY){
   const state = pickers[id];
   state.dragging = true;
   state.startY = clientY;
-  state.startIndex = state.index;
+  state.startOffset = state.offsetY || 0;
   state.inner.style.transition = 'none';
 }
 
@@ -297,18 +304,34 @@ function moveDrag(id, clientY){
   if(!state.dragging) return;
 
   const delta = clientY - state.startY;
-  const step = Math.round(delta / ITEM_HEIGHT);
 
-  state.index = state.startIndex - step;
-  renderPicker(id, false);
+  state.offsetY = state.startOffset + delta;
+
+  applyOffset(state);
 }
 
 function endDrag(id){
   const state = pickers[id];
   if(!state.dragging) return;
+
   state.dragging = false;
-  renderPicker(id, true);
+
+  snapToNearest(state);
 }
+
+
+function applyOffset(state){
+  state.inner.style.transform = `translateY(${state.offsetY}px)`;
+}
+
+function snapToNearest(state){
+  const rawIndex = -(state.offsetY / ITEM_HEIGHT) + CENTER_OFFSET;
+  state.index = Math.round(rawIndex);
+
+  renderPickerState(state, true);
+}
+
+
 
 function handleClick(id, e){
   const state = pickers[id];
