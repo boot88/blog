@@ -73,16 +73,14 @@ header,nav,.topbar{display:none!important;}
 
 .center-frame{
   position:absolute;
-  left:50%;
-  transform:translateX(-50%);
   top:50%;
+  left:0;
+  right:0;
   margin-top:-20px;
-  width:238px;
   height:40px;
   border-top:1px solid #cfcfcf;
   border-bottom:1px solid #cfcfcf;
   pointer-events:none;
-  border-radius:2px;
 }
 
 .block{
@@ -258,7 +256,9 @@ function buildPicker(el, max, initialValue){
 
   el.addEventListener('click', (e) => handleClick(el.id, e));
   
+  //state.offsetY = -(state.index - CENTER_OFFSET) * ITEM_HEIGHT;
   state.offsetY = -(state.index - CENTER_OFFSET) * ITEM_HEIGHT;
+  
 }
 
 function normalizeIndex(state){
@@ -339,13 +339,14 @@ function handleClick(id, e){
 
   const rect = state.el.getBoundingClientRect();
   const y = e.clientY - rect.top;
-  const clickedRow = Math.floor(y / ITEM_HEIGHT);
-  const deltaRows = clickedRow - CENTER_OFFSET;
 
-  if(deltaRows === 0) return;
+  const centerY = state.el.clientHeight / 2;
 
-  state.index += deltaRows;
-  renderPicker(id, true);
+  const deltaPx = y - centerY;
+
+  state.offsetY += deltaPx;
+
+  snapToNearest(state);
 }
 
 function getPickerValue(id){
