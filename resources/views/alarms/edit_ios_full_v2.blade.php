@@ -94,7 +94,16 @@ header,nav,.topbar{display:none!important;}
   justify-content:space-between;
   cursor:pointer;
 }
-.row span{color:#000;}
+.row span:first-child{
+  color:#000; /* заголовок */
+}
+
+.row span:last-child{
+  color:#3c3c43; /* значение */
+  font-weight:500;
+}
+
+
 
 .modal{
   position:fixed;
@@ -228,13 +237,13 @@ header,nav,.topbar{display:none!important;}
 <div class="block" style="margin-top:20px;">
   <div class="row" onclick="openDays()">
     <span>Дни недели</span>
-    <span id="daysText">ежедневно</span>
+    <span class="row" id="daysText">ежедневно</span>
   </div>
 </div>
 
 
 <div class="block" onclick="openSound()">
-  <div class="row"><span>Звук</span><span>по умолчанию</span></div>
+  <div class="row"><span>Звук</span><span class="row">по умолчанию</span></div>
 </div>
 
 <div class="block" onclick="editDescription()">
@@ -268,6 +277,21 @@ header,nav,.topbar{display:none!important;}
   </div>
 </div>
 
+<div class="modal" id="soundModal">
+  <div class="modal-overlay" onclick="closeSound()"></div>
+
+  <div class="modal-content modern">
+    <div class="modal-title">Звук</div>
+
+    <div id="soundList" class="days-list"></div>
+
+    <div class="modal-actions">
+      <button onclick="closeSound()" class="btn-cancel">Отмена</button>
+    </div>
+  </div>
+</div>
+
+
 <div class="toast" id="toast"></div>
 
 <form id="saveForm" method="POST" action="{{ route('alarms.update', $alarm) }}" style="display:none;">
@@ -278,6 +302,7 @@ header,nav,.topbar{display:none!important;}
   <input type="hidden" name="time" id="formTime" value="{{ substr($alarm->time, 0, 5) }}">
   <input type="hidden" name="enabled" id="formEnabled" value="{{ $alarm->enabled ? 1 : 0 }}">
   <input type="hidden" name="weekdays" id="formWeekdays">
+  <input type="hidden" name="sound" id="formSound">
   @if($alarm->date)
     <input type="hidden" name="date" id="formDate" value="{{ $alarm->date->format('Y-m-d') }}">
   @endif
@@ -582,6 +607,9 @@ function save(){
 
   showToast('Сохранение...');
   setTimeout(() => document.getElementById('saveForm').submit(), 150);
+  
+  document.getElementById('formSound').value = selectedSound;
+  
 }
 
 function closePage(){
@@ -643,9 +671,48 @@ function toggleDay(i){
 
 
 
+const sounds = [
+  {name:'Классический', file:'classic.mp3'},
+  {name:'Колокол', file:'bell.mp3'},
+  {name:'Цифровой', file:'digital.mp3'},
+  {name:'iPhone', file:'iphone.mp3'}
+];
 
 function openSound(){
-  alert('звуки позже подключим');
+  document.getElementById('soundModal').style.display='block';
+  renderSounds();
+}
+
+function renderSounds(){
+  const list = document.getElementById('soundList');
+  list.innerHTML = '';
+
+  sounds.forEach(s=>{
+    list.innerHTML += `
+      <div onclick="selectSound('${s.file}')">
+        <span>${s.name}</span>
+        <div class="checkbox ${selectedSound===s.file?'active':''}"></div>
+      </div>
+    `;
+  });
+}
+
+function selectSound(file){
+  selectedSound = file;
+
+  // проигрываем
+  const audio = new Audio('/sounds/' + file);
+  audio.play();
+
+  renderSounds();
+
+  // меняем текст
+  const name = sounds.find(s=>s.file===file).name;
+  document.querySelector('[onclick="openSound()"] span:last-child').innerText = name;
+}
+
+function closeSound(){
+  document.getElementById('soundModal').style.display='none';
 }
 
 function editDescription(){
