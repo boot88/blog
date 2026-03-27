@@ -288,11 +288,64 @@ header,nav,.topbar{display:none!important;}
   @method('DELETE')
 </form>
 
+<div id="confirmModal" style="
+  position:fixed;
+  inset:0;
+  display:none;
+  z-index:9999;
+">
+  <div style="
+    position:absolute;
+    inset:0;
+    background:rgba(0,0,0,.4);
+  " onclick="hideConfirm()"></div>
+
+  <div style="
+    position:absolute;
+    bottom:0;
+    left:0;
+    right:0;
+    background:#fff;
+    border-radius:20px 20px 0 0;
+    padding:20px;
+    text-align:center;
+  ">
+    <div style="font-weight:600;margin-bottom:15px;">
+      Сохранить изменения?
+    </div>
+
+    <button onclick="save()" style="
+      width:100%;
+      padding:12px;
+      background:#007aff;
+      color:#fff;
+      border:none;
+      border-radius:10px;
+      margin-bottom:10px;
+    ">
+      Сохранить
+    </button>
+
+    <button onclick="discardChanges()" style="
+      width:100%;
+      padding:12px;
+      background:#eee;
+      border:none;
+      border-radius:10px;
+    ">
+      Не сохранять
+    </button>
+  </div>
+</div>
+
+
 <script>
 const ITEM_HEIGHT = 40;
 const VISIBLE_ROWS = 5;
 const CENTER_OFFSET = Math.floor(VISIBLE_ROWS / 2);
 const REPEAT_COUNT = 7;
+
+let days = @json($alarm->weekdays) || [1,1,1,1,1,1,1];
 
 const alarm = {
   id: {{ $alarm->id }},
@@ -303,13 +356,20 @@ const alarm = {
   date: @json(optional($alarm->date)->format('Y-m-d'))
 };
 
+const originalState = JSON.stringify({
+  time: alarm.time,
+  title: alarm.title,
+  note: alarm.note,
+  days: days
+});
+
 
 
 const body = document.getElementById('saveForm');
 
 // 👇 добавляем
 
-let days = @json($alarm->weekdays) || [1,1,1,1,1,1,1];
+
 
 let weekdaysInput = document.getElementById('formWeekdays');
 if(!weekdaysInput){
@@ -525,7 +585,21 @@ function save(){
 }
 
 function closePage(){
-  history.back();
+  const currentState = JSON.stringify({
+    time: getTime(),
+    title: alarm.title,
+    note: alarm.note,
+    days: days
+  });
+
+  // если ничего не меняли
+  if(currentState === originalState){
+    window.location.href = '/alarms';
+    return;
+  }
+
+  // если есть изменения
+  showConfirmModal();
 }
 
 function openDays(){
@@ -588,6 +662,20 @@ function del(){
   showToast('Удаление...');
   setTimeout(() => document.getElementById('deleteForm').submit(), 150);
 }
+
+
+function showConfirmModal(){
+  document.getElementById('confirmModal').style.display='block';
+}
+
+function hideConfirm(){
+  document.getElementById('confirmModal').style.display='none';
+}
+
+function discardChanges(){
+  window.location.href = '/alarms';
+}
+
 
 console.log(pickers);
 //document.getElementById('m').style.background = 'red';
