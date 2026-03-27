@@ -302,7 +302,7 @@ const alarm = {
   date: @json(optional($alarm->date)->format('Y-m-d'))
 };
 
-document.getElementById('formTime').value = getTime();
+
 
 const body = document.getElementById('saveForm');
 
@@ -507,6 +507,8 @@ function fill(){
 }
 fill();
 updateDaysText();
+document.getElementById('formTime').value = getTime();
+
 
 function save(){
   document.getElementById('formTitle').value = alarm.title;
