@@ -311,10 +311,6 @@ const body = document.getElementById('saveForm');
 
 let days = @json($alarm->weekdays) || [1,1,1,1,1,1,1];
 
-if (!$data['weekdays']) {
-    $data['weekdays'] = [1,1,1,1,1,1,1];
-}
-
 let weekdaysInput = document.getElementById('formWeekdays');
 if(!weekdaysInput){
   weekdaysInput = document.createElement('input');
