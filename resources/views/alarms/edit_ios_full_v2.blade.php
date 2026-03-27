@@ -176,12 +176,61 @@ header,nav,.topbar{display:none!important;}
   width:20px;
   height:20px;
   border:2px solid #ccc;
-  border-radius:4px;
+  border-radius:50%; /* круг */
+  position:relative;
 }
 
-.checkbox.active{
+/* ДНИ — квадрат */
+.day-checkbox{
+  width:20px;
+  height:20px;
+  min-width:20px;
+  min-height:20px;
+  max-width:20px;
+  max-height:20px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.day-checkbox.active{
   background:#007aff;
   border-color:#007aff;
+}
+
+.day-checkbox.active::after{
+  content:'✓';
+  color:#fff;
+  font-size:14px;
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+}
+
+/* ЗВУК — радио */
+.sound-radio{
+  width:20px;
+  height:20px;
+  border:2px solid #ccc;
+  border-radius:50%;
+  position:relative;
+}
+
+.sound-radio.active{
+  border-color:#007aff;
+}
+
+.sound-radio.active::after{
+  content:'';
+  width:10px;
+  height:10px;
+  background:#007aff;
+  border-radius:50%;
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
 }
 
 .modal-actions{
@@ -218,6 +267,8 @@ header,nav,.topbar{display:none!important;}
 }
 
 
+
+
 </style>
 
 <div class="header">
@@ -243,7 +294,7 @@ header,nav,.topbar{display:none!important;}
 
 
 <div class="block" onclick="openSound()">
-  <div class="row"><span>Звук</span><span class="row">по умолчанию</span></div>
+  <div class="row"><span>Звук</span><span id="soundText">по умолчанию</span></div>
 </div>
 
 <div class="block" onclick="editDescription()">
@@ -370,7 +421,11 @@ const VISIBLE_ROWS = 5;
 const CENTER_OFFSET = Math.floor(VISIBLE_ROWS / 2);
 const REPEAT_COUNT = 7;
 
+
+let selectedSound = '{{ $alarm->sound ?? "alarm.mp3" }}';
 let days = @json($alarm->weekdays) || [1,1,1,1,1,1,1];
+
+
 
 const alarm = {
   id: {{ $alarm->id }},
@@ -407,6 +462,8 @@ if(!weekdaysInput){
 
 weekdaysInput.value = JSON.stringify(days);
 
+
+let playingFile = null;
 
 const dayNames = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 
@@ -448,6 +505,7 @@ function buildPicker(el, max, initialValue){
 
   const middleCycle = Math.floor(REPEAT_COUNT / 2);
   const index = middleCycle * max + initialValue;
+ 
 
   const state = {
     el,
@@ -632,7 +690,7 @@ function closePage(){
 
 function openDays(){
   tempDays = [...days];
-  document.getElementById('daysModal').style.display = 'block';
+  document.getElementById('daysModal').style.display = 'flex';
   renderDays();
 }
 
@@ -658,7 +716,7 @@ function renderDays(){
     list.innerHTML += `
       <div onclick="toggleDay(${i})">
         <span>${name}</span>
-        <div class="checkbox ${tempDays[i] ? 'active' : ''}"></div>
+        <div class="day-checkbox ${tempDays[i] ? 'active' : ''}">
       </div>
     `;
   });
@@ -673,46 +731,106 @@ function toggleDay(i){
 
 const sounds = [
   {name:'Классический', file:'alarm.mp3'},
-  {name:'Колокол', file:'alarm.mp3'},
-  {name:'Цифровой', file:'alarm.mp3'},
-  {name:'iPhone', file:'alarm.mp3'}
+  {name:'Колокол', file:'alarm.mp3?1'},
+  {name:'Цифровой', file:'alarm.mp3?2'},
+  {name:'iPhone', file:'alarm.mp3?3'}
 ];
 
+
+const currentSound = sounds.find(s => s.file === selectedSound);
+if(currentSound){
+  document.getElementById('soundText').innerText = currentSound.name;
+}
+
 function openSound(){
-  document.getElementById('soundModal').style.display='block';
+  document.getElementById('soundModal').style.display='flex';
   renderSounds();
 }
+
+
 
 function renderSounds(){
   const list = document.getElementById('soundList');
   list.innerHTML = '';
+  
 
   sounds.forEach(s=>{
+    const isPlaying = playingFile === s.file && currentAudio && !currentAudio.paused;
+
     list.innerHTML += `
-      <div onclick="selectSound('${s.file}')">
-        <span>${s.name}</span>
-        <div class="checkbox ${selectedSound===s.file?'active':''}"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;">
+        
+        <span onclick="selectSound('${s.file}')" style="flex:1;">
+          ${s.name}
+        </span>
+
+        <div style="display:flex;align-items:center;gap:12px;">
+          
+          <span onclick="previewSound('${s.file}', event)" 
+                style="color:#007aff;font-size:16px;cursor:pointer;">
+            ${isPlaying ? '⏸' : '▶'}
+          </span>
+
+          <div class="sound-radio ${selectedSound===s.file?'active':''}"
+               onclick="selectSound('${s.file}')">
+          </div>
+
+        </div>
       </div>
     `;
   });
 }
 
+
+
+
+
+function previewSound(file, e){
+  e.stopPropagation();
+
+  // если тот же файл → пауза
+  if(playingFile === file && currentAudio && !currentAudio.paused){
+    currentAudio.pause();
+    renderSounds();
+    return;
+  }
+
+  // остановить прошлый
+  if(currentAudio){
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+  }
+
+  currentAudio = new Audio('/sounds/' + file.split('?')[0]);
+  currentAudio.play();
+
+  playingFile = file;
+
+  renderSounds();
+}
+
+
+
+let currentAudio = null;
+
 function selectSound(file){
   selectedSound = file;
 
-  // проигрываем
-  const audio = new Audio('/sounds/' + file);
-  audio.play();
-
   renderSounds();
 
-  // меняем текст
+  // меняем текст "по умолчанию"
   const name = sounds.find(s=>s.file===file).name;
-  document.querySelector('[onclick="openSound()"] span:last-child').innerText = name;
+  document.getElementById('soundText').innerText = name;
 }
 
 function closeSound(){
   document.getElementById('soundModal').style.display='none';
+
+  // 🔥 стоп звук
+  if(currentAudio){
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+  }
 }
 
 function editDescription(){
