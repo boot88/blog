@@ -162,37 +162,50 @@ function computeNextText(){
 computeNextText();
 setInterval(computeNextText,60000);
 
+
+
+
 function toggle(el,id){
   el.classList.toggle('active');
   const row=el.closest('.alarm');
   row.classList.toggle('disabled');
 
+  const isActive = el.classList.contains('active');
+
   // обновляем локальный массив
-  alarms = alarms.map(a=> a.id===id ? {...a, enabled: el.classList.contains('active')} : a);
+  alarms = alarms.map(a=> a.id===id ? {...a, enabled: isActive} : a);
 
-  computeNextText(); // сразу пересчитать
-  
-  const text = document.getElementById('nextText').innerText;
+  computeNextText();
 
-const toast = document.createElement('div');
-toast.innerText = text;
-toast.style = `
-position:fixed;
-bottom:20px;
-left:50%;
-transform:translateX(-50%);
-background:#000;
-color:#fff;
-padding:10px 20px;
-border-radius:20px;
-z-index:999;
-`;
+  // ✅ показываем ТОЛЬКО если включили
+  if(isActive){
+    const text = document.getElementById('nextText').innerText;
 
-document.body.appendChild(toast);
+    const toast = document.createElement('div');
+    toast.innerText = text;
 
-setTimeout(()=>toast.remove(),2000);
-  
+    toast.style = `
+      position:fixed;
+      bottom:20px;
+      left:50%;
+      transform:translateX(-50%);
+      background:#f2f2f7;
+      color:#3c3c43;
+      padding:10px 20px;
+      border-radius:20px;
+      z-index:999;
+      font-size:14px;
+    `;
+
+    document.body.appendChild(toast);
+
+    setTimeout(()=>toast.remove(),2000);
+  }
 }
+
+
+
+
 
 function edit(id){ window.location='/alarms/'+id+'/edit'; }
 </script>
