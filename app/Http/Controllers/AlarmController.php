@@ -34,7 +34,9 @@ class AlarmController extends Controller
             'weekdays' => ['nullable','array'],
         ]);
         
-        $data['weekdays'] = $request->input('weekdays', null);
+        $data['weekdays'] = $request->filled('weekdays')
+    ? json_decode($request->weekdays, true)
+    : null;
 
         $data['enabled'] = (bool)($data['enabled'] ?? false);
         $data['timezone'] = config('app.timezone');
@@ -60,7 +62,9 @@ class AlarmController extends Controller
         'weekdays' => ['nullable','array'],
     ]);
     
-    $data['weekdays'] = $request->input('weekdays', null);
+    $data['weekdays'] = $request->filled('weekdays')
+    ? json_decode($request->weekdays, true)
+    : null;
 
     $data['enabled'] = array_key_exists('enabled', $data)
         ? (bool)$data['enabled']
