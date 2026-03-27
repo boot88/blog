@@ -12,10 +12,16 @@ h1+div{display:none!important}
 
 .next{color:#000;margin:0 20px 20px 20px; /* слева под часами */}
 
+
+
+
 .alarm{display:flex;justify-content:space-between;align-items:center;padding:18px;border-bottom:1px solid #ddd;background:white}
-.alarm.disabled{opacity:.4}
+.alarm.disabled{opacity:.5}
 .time{font-size:44px;font-weight:300}
 .label{color:#555}
+
+
+
 
 .toggle{width:50px;height:28px;background:#666;border-radius:20px;position:relative;cursor:pointer}
 .toggle.active{background:#34c759}
@@ -172,14 +178,32 @@ function toggle(el,id){
 
   const isActive = el.classList.contains('active');
 
-  // обновляем локальный массив
   alarms = alarms.map(a=> a.id===id ? {...a, enabled: isActive} : a);
 
   computeNextText();
 
-  // ✅ показываем ТОЛЬКО если включили
   if(isActive){
-    const text = document.getElementById('nextText').innerText;
+    const alarm = alarms.find(a => a.id === id);
+
+    const now = new Date();
+    const [h, m] = alarm.time.split(':');
+
+    let t = new Date();
+    t.setHours(h, m, 0, 0);
+
+    if(t < now) t.setDate(t.getDate() + 1);
+
+    let diff = t - now;
+
+    let sec = Math.floor(diff / 1000);
+    let d = Math.floor(sec / 86400); sec %= 86400;
+    let h2 = Math.floor(sec / 3600); sec %= 3600;
+    let m2 = Math.floor(sec / 60);
+
+    let text = 'Сработает через ';
+    if(d) text += d + ' д ';
+    if(h2) text += h2 + ' ч ';
+    text += m2 + ' мин';
 
     const toast = document.createElement('div');
     toast.innerText = text;
