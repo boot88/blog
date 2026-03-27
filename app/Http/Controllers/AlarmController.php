@@ -31,7 +31,7 @@ class AlarmController extends Controller
             'date' => ['nullable','date'],      // null = ежедневно
             'time' => ['required','date_format:H:i'],
             'enabled' => ['nullable','boolean'],
-            'weekdays' => ['nullable','array'],
+           'weekdays' => ['nullable'],
         ]);
         
         $data['weekdays'] = $request->filled('weekdays')
@@ -59,7 +59,7 @@ class AlarmController extends Controller
         'date' => ['nullable','date'],
         'time' => ['required','date_format:H:i'],
         'enabled' => ['nullable','boolean'],
-        'weekdays' => ['nullable','array'],
+        'weekdays' => ['nullable'],
     ]);
     
     $data['weekdays'] = $request->filled('weekdays')

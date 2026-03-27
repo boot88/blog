@@ -277,6 +277,7 @@ header,nav,.topbar{display:none!important;}
   <input type="hidden" name="note" id="formNote" value="{{ $alarm->note ?? '' }}">
   <input type="hidden" name="time" id="formTime" value="{{ substr($alarm->time, 0, 5) }}">
   <input type="hidden" name="enabled" id="formEnabled" value="{{ $alarm->enabled ? 1 : 0 }}">
+  <input type="hidden" name="weekdays" id="formWeekdays">
   @if($alarm->date)
     <input type="hidden" name="date" id="formDate" value="{{ $alarm->date->format('Y-m-d') }}">
   @endif
@@ -309,6 +310,10 @@ const body = document.getElementById('saveForm');
 // 👇 добавляем
 
 let days = @json($alarm->weekdays) || [1,1,1,1,1,1,1];
+
+if (!$data['weekdays']) {
+    $data['weekdays'] = [1,1,1,1,1,1,1];
+}
 
 let weekdaysInput = document.getElementById('formWeekdays');
 if(!weekdaysInput){
