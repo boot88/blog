@@ -672,10 +672,10 @@ function toggleDay(i){
 
 
 const sounds = [
-  {name:'Классический', file:'classic.mp3'},
-  {name:'Колокол', file:'bell.mp3'},
-  {name:'Цифровой', file:'digital.mp3'},
-  {name:'iPhone', file:'iphone.mp3'}
+  {name:'Классический', file:'alarm.mp3'},
+  {name:'Колокол', file:'alarm.mp3'},
+  {name:'Цифровой', file:'alarm.mp3'},
+  {name:'iPhone', file:'alarm.mp3'}
 ];
 
 function openSound(){
