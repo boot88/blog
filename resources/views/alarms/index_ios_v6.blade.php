@@ -105,17 +105,17 @@ function drawClock(){
   }
 
   let sec=now.getSeconds(), min=now.getMinutes(), hr=now.getHours()%12;
-  let hA=(hr+min/60)*Math.PI/6;
+  let hA = (hr + min / 60 - 3) * Math.PI / 6;
   ctx.beginPath();ctx.moveTo(80,80);
   ctx.lineTo(80+35*Math.cos(hA),80+35*Math.sin(hA));
   ctx.lineWidth=4;ctx.strokeStyle='#444';ctx.stroke();
 
-  let mA=min*Math.PI/30;
+  let mA = (min - 15) * Math.PI / 30;
   ctx.beginPath();ctx.moveTo(80,80);
   ctx.lineTo(80+50*Math.cos(mA),80+50*Math.sin(mA));
   ctx.lineWidth=3;ctx.strokeStyle='#666';ctx.stroke();
 
-  let sA=sec*Math.PI/30;
+  let sA = (sec - 15) * Math.PI / 30;
   ctx.beginPath();ctx.moveTo(80,80);
   ctx.lineTo(80+65*Math.cos(sA),80+65*Math.sin(sA));
   ctx.strokeStyle='#ff3b30';ctx.lineWidth=2;ctx.stroke();
