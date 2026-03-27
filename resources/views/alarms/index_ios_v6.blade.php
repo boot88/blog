@@ -10,7 +10,7 @@ h1+div{display:none!important}
 .clock-box{width:160px;height:160px;position:relative}
 #digital{position:absolute;top:0;left:0;width:160px;height:160px;display:flex;align-items:center;justify-content:center;font-size:28px}
 
-.next{color:#666;margin:0 20px 20px 20px; /* слева под часами */}
+.next{color:#000;margin:0 20px 20px 20px; /* слева под часами */}
 
 .alarm{display:flex;justify-content:space-between;align-items:center;padding:18px;border-bottom:1px solid #ddd;background:white}
 .alarm.disabled{opacity:.4}
@@ -41,7 +41,24 @@ h1+div{display:none!important}
 <div class="alarm {{ $alarm->enabled?'':'disabled' }}" data-id="{{ $alarm->id }}" onclick="edit({{ $alarm->id }})">
   <div>
     <div class="time">{{ substr($alarm->time,0,5) }}</div>
-    <div class="label">{{ $alarm->title }}</div>
+    <div style="color:#8e8e93;">
+    {{ $alarm->title }}
+    @php
+        $days = $alarm->weekdays ?? [1,1,1,1,1,1,1];
+        $names = ['пн','вт','ср','чт','пт','сб','вс'];
+
+        $active = [];
+        foreach ($days as $i => $d) {
+            if ($d) $active[] = $names[$i];
+        }
+    @endphp
+
+    @if(count($active) === 7)
+        , Каждый день
+    @elseif(count($active) > 0)
+        , {{ implode(' ', $active) }}
+    @endif
+</div>
   </div>
   <div class="toggle {{ $alarm->enabled?'active':'' }}" onclick="event.stopPropagation();toggle(this,{{ $alarm->id }})"></div>
 </div>
@@ -63,7 +80,7 @@ function toggleClock(){
 function drawClock(){
   const canvas=document.getElementById('clockCanvas');
   const ctx=canvas.getContext('2d');
-  const now=new Date();
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Novosibirsk' }));
   ctx.clearRect(0,0,160,160);
 
   let grad=ctx.createRadialGradient(80,80,60,80,80,80);
@@ -105,13 +122,13 @@ function drawClock(){
 
   ctx.beginPath();ctx.arc(80,80,5,0,Math.PI*2);ctx.fillStyle='#000';ctx.fill();
 
-  document.getElementById('digital').innerText=
-    now.toLocaleTimeString('ru-RU',{timeZone:'Asia/Novosibirsk'});
+  document.getElementById('digital').innerText =
+  now.toLocaleTimeString('ru-RU');
 }
 setInterval(drawClock,1000);drawClock();
 
 function computeNextText(){
-  const now=new Date();
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Novosibirsk' }));
   let minDiff=null;
 
   alarms.forEach(a=>{
