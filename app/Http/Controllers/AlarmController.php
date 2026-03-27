@@ -38,7 +38,9 @@ class AlarmController extends Controller
         $data['weekdays'] = $request->filled('weekdays')
     ? json_decode($request->weekdays, true)
     : null;
-
+        
+        
+        
         $data['enabled'] = (bool)($data['enabled'] ?? false);
         $data['timezone'] = config('app.timezone');
 
@@ -62,12 +64,16 @@ class AlarmController extends Controller
         'enabled' => ['nullable','boolean'],
         'weekdays' => ['nullable'],
         'sound' => ['nullable','string'],
+        
+        
     ]);
     
     $data['weekdays'] = $request->filled('weekdays')
     ? json_decode($request->weekdays, true)
     : null;
-
+    
+    $data['sound'] = $request->input('sound');
+    
     $data['enabled'] = array_key_exists('enabled', $data)
         ? (bool)$data['enabled']
         : $alarm->enabled;

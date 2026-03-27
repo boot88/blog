@@ -108,11 +108,12 @@ header,nav,.topbar{display:none!important;}
 .modal{
   position:fixed;
   inset:0;
-  background:rgba(0,0,0,.3);
   display:none;
+  z-index:9999;
   align-items:center;
   justify-content:center;
 }
+
 .modal-content{
   background:#fff;
   padding:20px;
@@ -134,12 +135,7 @@ header,nav,.topbar{display:none!important;}
 }
 
 
-.modal{
-  position:fixed;
-  inset:0;
-  display:none;
-  z-index:999;
-}
+
 
 .modal-overlay{
   position:absolute;
@@ -148,14 +144,10 @@ header,nav,.topbar{display:none!important;}
 }
 
 .modal-content.modern{
-  position:absolute;
-  left:50%;
-  bottom:0;
-  transform:translateX(-50%);
-  width:100%;
-  max-width:400px;
+  position:relative;
+  width:min(400px, calc(100% - 24px));
   background:#fff;
-  border-radius:20px 20px 0 0;
+  border-radius:20px;
   padding:20px;
 }
 
@@ -184,13 +176,10 @@ header,nav,.topbar{display:none!important;}
 .day-checkbox{
   width:20px;
   height:20px;
-  min-width:20px;
-  min-height:20px;
-  max-width:20px;
-  max-height:20px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  flex:0 0 20px;
+  border:2px solid #c7c7cc;
+  border-radius:4px;
+  position:relative;
 }
 
 .day-checkbox.active{
@@ -208,11 +197,14 @@ header,nav,.topbar{display:none!important;}
   transform:translate(-50%,-50%);
 }
 
+
 /* ЗВУК — радио */
+.day-checkbox,
 .sound-radio{
   width:20px;
   height:20px;
-  border:2px solid #ccc;
+  flex:0 0 20px;
+  border:2px solid #c7c7cc;
   border-radius:50%;
   position:relative;
 }
@@ -338,6 +330,7 @@ header,nav,.topbar{display:none!important;}
 
     <div class="modal-actions">
       <button onclick="closeSound()" class="btn-cancel">Отмена</button>
+      <button onclick="applySound()" class="btn-ok">ОК</button>
     </div>
   </div>
 </div>
@@ -425,7 +418,10 @@ const REPEAT_COUNT = 7;
 let selectedSound = '{{ $alarm->sound ?? "alarm.mp3" }}';
 let days = @json($alarm->weekdays) || [1,1,1,1,1,1,1];
 
+let tempSound = selectedSound;
 
+let currentAudio = null;
+let playingFile = null;
 
 const alarm = {
   id: {{ $alarm->id }},
@@ -440,7 +436,8 @@ const originalState = JSON.stringify({
   time: alarm.time,
   title: alarm.title,
   note: alarm.note,
-  days: days
+  days: days,
+  sound: selectedSound // 
 });
 
 
@@ -463,7 +460,9 @@ if(!weekdaysInput){
 weekdaysInput.value = JSON.stringify(days);
 
 
-let playingFile = null;
+
+
+
 
 const dayNames = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 
@@ -593,6 +592,15 @@ function applyOffset(state){
   state.inner.style.transform = `translateY(${state.offsetY}px)`;
 }
 
+function applySound(){
+  selectedSound = tempSound; // 
+
+  const name = sounds.find(s=>s.file===selectedSound).name;
+  document.getElementById('soundText').innerText = name;
+
+  document.getElementById('soundModal').style.display='none';
+}
+
 function snapToNearest(state){
   const rawIndex = -(state.offsetY / ITEM_HEIGHT) + CENTER_OFFSET;
   state.index = Math.round(rawIndex);
@@ -675,7 +683,8 @@ function closePage(){
     time: getTime(),
     title: alarm.title,
     note: alarm.note,
-    days: days
+    days: days,
+    sound: selectedSound
   });
 
   // если ничего не меняли
@@ -688,11 +697,16 @@ function closePage(){
   showConfirmModal();
 }
 
+
+
+
 function openDays(){
   tempDays = [...days];
   document.getElementById('daysModal').style.display = 'flex';
   renderDays();
 }
+
+
 
 function applyDays(){
   days = [...tempDays];
@@ -701,12 +715,14 @@ function applyDays(){
 }
 
 function closeDays(){
-  document.getElementById('daysModal').style.display = 'none';
+  document.getElementById('daysModal').style.display = 'flex';
 }
 
 function cancelDays(){
   document.getElementById('daysModal').style.display = 'none';
 }
+
+
 
 function renderDays(){
   const list = document.getElementById('daysList');
@@ -716,11 +732,13 @@ function renderDays(){
     list.innerHTML += `
       <div onclick="toggleDay(${i})">
         <span>${name}</span>
-        <div class="day-checkbox ${tempDays[i] ? 'active' : ''}">
+        <div class="day-checkbox ${tempDays[i] ? 'active' : ''}"></div>
       </div>
     `;
   });
 }
+
+
 
 function toggleDay(i){
   tempDays[i] = tempDays[i] ? 0 : 1;
@@ -731,9 +749,9 @@ function toggleDay(i){
 
 const sounds = [
   {name:'Классический', file:'alarm.mp3'},
-  {name:'Колокол', file:'alarm.mp3?1'},
-  {name:'Цифровой', file:'alarm.mp3?2'},
-  {name:'iPhone', file:'alarm.mp3?3'}
+  {name:'Колокол', file:'bell.mp3'},
+  {name:'Цифровой', file:'digital.mp3'},
+  {name:'iPhone', file:'iphone.mp3'}
 ];
 
 
@@ -743,6 +761,7 @@ if(currentSound){
 }
 
 function openSound(){
+  tempSound = selectedSound; // 🔥 копия
   document.getElementById('soundModal').style.display='flex';
   renderSounds();
 }
@@ -752,7 +771,6 @@ function openSound(){
 function renderSounds(){
   const list = document.getElementById('soundList');
   list.innerHTML = '';
-  
 
   sounds.forEach(s=>{
     const isPlaying = playingFile === s.file && currentAudio && !currentAudio.paused;
@@ -771,7 +789,7 @@ function renderSounds(){
             ${isPlaying ? '⏸' : '▶'}
           </span>
 
-          <div class="sound-radio ${selectedSound===s.file?'active':''}"
+          <div class="sound-radio ${tempSound===s.file?'active':''}"
                onclick="selectSound('${s.file}')">
           </div>
 
@@ -788,33 +806,31 @@ function renderSounds(){
 function previewSound(file, e){
   e.stopPropagation();
 
-  // если тот же файл → пауза
   if(playingFile === file && currentAudio && !currentAudio.paused){
     currentAudio.pause();
+    playingFile = null;
     renderSounds();
     return;
   }
 
-  // остановить прошлый
   if(currentAudio){
     currentAudio.pause();
     currentAudio.currentTime = 0;
   }
 
-  currentAudio = new Audio('/sounds/' + file.split('?')[0]);
+  currentAudio = new Audio('/sounds/' + file);
   currentAudio.play();
 
   playingFile = file;
-
   renderSounds();
 }
 
 
 
-let currentAudio = null;
+//let currentAudio = null;
 
 function selectSound(file){
-  selectedSound = file;
+  tempSound = file;
 
   renderSounds();
 
@@ -826,11 +842,15 @@ function selectSound(file){
 function closeSound(){
   document.getElementById('soundModal').style.display='none';
 
-  // 🔥 стоп звук
+  // 🔥 откат
+  tempSound = selectedSound;
+
   if(currentAudio){
     currentAudio.pause();
     currentAudio.currentTime = 0;
   }
+
+  playingFile = null;
 }
 
 function editDescription(){

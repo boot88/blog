@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Alarm extends Model
 {
     protected $fillable = [
-    'title','note','date','time','enabled','timezone','last_triggered_at','weekdays'
+    'title','note','date','time','enabled','timezone','last_triggered_at','weekdays','sound'
 ];
 
     protected $casts = [
