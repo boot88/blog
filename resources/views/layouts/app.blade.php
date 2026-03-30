@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Будильники')</title>
+    <title>@yield('title', 'Cms')</title>
     <style>
         body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:24px;background:#0b1220;color:#e8eefc}
         a{color:#9cc2ff;text-decoration:none}
@@ -25,11 +25,15 @@
 </head>
 <body>
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:14px">
+        
+        @if(!isset($noHeader))
         <h1 style="margin:0">@yield('header', 'Будильники')</h1>
         <div class="row">
             <a class="btn" href="{{ route('alarms.index') }}">Список</a>
             <a class="btn btn-primary" href="{{ route('alarms.create') }}">+ Добавить</a>
         </div>
+        @endif
+        
     </div>
 
     @if(session('ok'))
@@ -43,7 +47,7 @@
         <div class="modal">
             <div class="row" style="justify-content:space-between;align-items:flex-start">
                 <div>
-                    <h2 id="alarmTitle">Будильник</h2>
+                    <h2 id="alarmTitle">Будильник2</h2>
                     <div id="alarmNote" class="muted"></div>
                     <div id="alarmMeta" class="muted" style="margin-top:8px;font-size:12px"></div>
                 </div>

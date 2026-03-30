@@ -10,12 +10,18 @@ h1+div{display:none!important}
 .clock-box{width:160px;height:160px;position:relative}
 #digital{position:absolute;top:0;left:0;width:160px;height:160px;display:flex;align-items:center;justify-content:center;font-size:28px}
 
-.next{color:#666;margin:0 20px 20px 20px; /* слева под часами */}
+.next{color:#000;margin:0 20px 20px 20px; /* слева под часами */}
+
+
+
 
 .alarm{display:flex;justify-content:space-between;align-items:center;padding:18px;border-bottom:1px solid #ddd;background:white}
-.alarm.disabled{opacity:.4}
+.alarm.disabled{opacity:.5}
 .time{font-size:44px;font-weight:300}
 .label{color:#555}
+
+
+
 
 .toggle{width:50px;height:28px;background:#666;border-radius:20px;position:relative;cursor:pointer}
 .toggle.active{background:#34c759}
@@ -41,7 +47,24 @@ h1+div{display:none!important}
 <div class="alarm {{ $alarm->enabled?'':'disabled' }}" data-id="{{ $alarm->id }}" onclick="edit({{ $alarm->id }})">
   <div>
     <div class="time">{{ substr($alarm->time,0,5) }}</div>
-    <div class="label">{{ $alarm->title }}</div>
+    <div style="color:#8e8e93;">
+    {{ $alarm->title }}
+    @php
+        $days = $alarm->weekdays ?? [1,1,1,1,1,1,1];
+        $names = ['пн','вт','ср','чт','пт','сб','вс'];
+
+        $active = [];
+        foreach ($days as $i => $d) {
+            if ($d) $active[] = $names[$i];
+        }
+    @endphp
+
+    @if(count($active) === 7)
+        , Каждый день
+    @elseif(count($active) > 0)
+        , {{ implode(' ', $active) }}
+    @endif
+</div>
   </div>
   <div class="toggle {{ $alarm->enabled?'active':'' }}" onclick="event.stopPropagation();toggle(this,{{ $alarm->id }})"></div>
 </div>
@@ -63,7 +86,7 @@ function toggleClock(){
 function drawClock(){
   const canvas=document.getElementById('clockCanvas');
   const ctx=canvas.getContext('2d');
-  const now=new Date();
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Novosibirsk' }));
   ctx.clearRect(0,0,160,160);
 
   let grad=ctx.createRadialGradient(80,80,60,80,80,80);
@@ -88,30 +111,30 @@ function drawClock(){
   }
 
   let sec=now.getSeconds(), min=now.getMinutes(), hr=now.getHours()%12;
-  let hA=(hr+min/60)*Math.PI/6;
+  let hA = (hr + min / 60 - 3) * Math.PI / 6;
   ctx.beginPath();ctx.moveTo(80,80);
   ctx.lineTo(80+35*Math.cos(hA),80+35*Math.sin(hA));
   ctx.lineWidth=4;ctx.strokeStyle='#444';ctx.stroke();
 
-  let mA=min*Math.PI/30;
+  let mA = (min - 15) * Math.PI / 30;
   ctx.beginPath();ctx.moveTo(80,80);
   ctx.lineTo(80+50*Math.cos(mA),80+50*Math.sin(mA));
   ctx.lineWidth=3;ctx.strokeStyle='#666';ctx.stroke();
 
-  let sA=sec*Math.PI/30;
+  let sA = (sec - 15) * Math.PI / 30;
   ctx.beginPath();ctx.moveTo(80,80);
   ctx.lineTo(80+65*Math.cos(sA),80+65*Math.sin(sA));
   ctx.strokeStyle='#ff3b30';ctx.lineWidth=2;ctx.stroke();
 
   ctx.beginPath();ctx.arc(80,80,5,0,Math.PI*2);ctx.fillStyle='#000';ctx.fill();
 
-  document.getElementById('digital').innerText=
-    now.toLocaleTimeString('ru-RU',{timeZone:'Asia/Novosibirsk'});
+  document.getElementById('digital').innerText =
+  now.toLocaleTimeString('ru-RU');
 }
 setInterval(drawClock,1000);drawClock();
 
 function computeNextText(){
-  const now=new Date();
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Novosibirsk' }));
   let minDiff=null;
 
   alarms.forEach(a=>{
@@ -145,16 +168,68 @@ function computeNextText(){
 computeNextText();
 setInterval(computeNextText,60000);
 
+
+
+
 function toggle(el,id){
   el.classList.toggle('active');
   const row=el.closest('.alarm');
   row.classList.toggle('disabled');
 
-  // обновляем локальный массив
-  alarms = alarms.map(a=> a.id===id ? {...a, enabled: el.classList.contains('active')} : a);
+  const isActive = el.classList.contains('active');
 
-  computeNextText(); // сразу пересчитать
+  alarms = alarms.map(a=> a.id===id ? {...a, enabled: isActive} : a);
+
+  computeNextText();
+
+  if(isActive){
+    const alarm = alarms.find(a => a.id === id);
+
+    const now = new Date();
+    const [h, m] = alarm.time.split(':');
+
+    let t = new Date();
+    t.setHours(h, m, 0, 0);
+
+    if(t < now) t.setDate(t.getDate() + 1);
+
+    let diff = t - now;
+
+    let sec = Math.floor(diff / 1000);
+    let d = Math.floor(sec / 86400); sec %= 86400;
+    let h2 = Math.floor(sec / 3600); sec %= 3600;
+    let m2 = Math.floor(sec / 60);
+
+    let text = 'Сработает через ';
+    if(d) text += d + ' д ';
+    if(h2) text += h2 + ' ч ';
+    text += m2 + ' мин';
+
+    const toast = document.createElement('div');
+    toast.innerText = text;
+
+    toast.style = `
+      position:fixed;
+      bottom:20px;
+      left:50%;
+      transform:translateX(-50%);
+      background:#f2f2f7;
+      color:#3c3c43;
+      padding:10px 20px;
+      border-radius:20px;
+      z-index:999;
+      font-size:14px;
+    `;
+
+    document.body.appendChild(toast);
+
+    setTimeout(()=>toast.remove(),2000);
+  }
 }
+
+
+
+
 
 function edit(id){ window.location='/alarms/'+id+'/edit'; }
 </script>

@@ -7,14 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 class Alarm extends Model
 {
     protected $fillable = [
-        'title','note','date','time','enabled','timezone','last_triggered_at'
-    ];
+    'title','note','date','time','enabled','timezone','last_triggered_at','weekdays','sound'
+];
 
     protected $casts = [
-        'enabled' => 'boolean',
-        'date' => 'date:Y-m-d',
-        'last_triggered_at' => 'datetime',
-    ];
+    'enabled' => 'boolean',
+    'date' => 'date:Y-m-d',
+    'last_triggered_at' => 'datetime',
+    'weekdays' => 'array', // 🔥 ВАЖНО
+];
 
     public function isDaily(): bool
     {

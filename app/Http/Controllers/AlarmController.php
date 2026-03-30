@@ -15,7 +15,7 @@ class AlarmController extends Controller
             ->orderBy('time')
             ->get();
 
-        return view('alarms.index', compact('alarms'));
+        return view('alarms.index_ios_v6', compact('alarms'));
     }
 
     public function create()
@@ -31,8 +31,16 @@ class AlarmController extends Controller
             'date' => ['nullable','date'],      // null = ежедневно
             'time' => ['required','date_format:H:i'],
             'enabled' => ['nullable','boolean'],
+           'weekdays' => ['nullable'],
+           'sound' => ['nullable','string'],
         ]);
-
+        
+        $data['weekdays'] = $request->filled('weekdays')
+    ? json_decode($request->weekdays, true)
+    : null;
+        
+        
+        
         $data['enabled'] = (bool)($data['enabled'] ?? false);
         $data['timezone'] = config('app.timezone');
 
@@ -43,31 +51,57 @@ class AlarmController extends Controller
 
     public function edit(Alarm $alarm)
     {
-        return view('alarms.edit', compact('alarm'));
+        return view('alarms.edit_ios_full_v2', compact('alarm'));
     }
 
     public function update(Request $request, Alarm $alarm)
-    {
-        $data = $request->validate([
-            'title' => ['required','string','max:255'],
-            'note' => ['nullable','string','max:2000'],
-            'date' => ['nullable','date'],
-            'time' => ['required','date_format:H:i'],
-            'enabled' => ['nullable','boolean'],
+{
+    $data = $request->validate([
+        'title' => ['required','string','max:255'],
+        'note' => ['nullable','string','max:2000'],
+        'date' => ['nullable','date'],
+        'time' => ['required','date_format:H:i'],
+        'enabled' => ['nullable','boolean'],
+        'weekdays' => ['nullable'],
+        'sound' => ['nullable','string'],
+        
+        
+    ]);
+    
+    $data['weekdays'] = $request->filled('weekdays')
+    ? json_decode($request->weekdays, true)
+    : null;
+    
+    $data['sound'] = $request->input('sound');
+    
+    $data['enabled'] = array_key_exists('enabled', $data)
+        ? (bool)$data['enabled']
+        : $alarm->enabled;
+
+    $alarm->update($data);
+
+    // 👇 ВАЖНО
+    if ($request->expectsJson()) {
+        return response()->json([
+            'ok' => true,
+            'alarm' => $alarm->fresh(),
         ]);
-
-        $data['enabled'] = (bool)($data['enabled'] ?? false);
-
-        $alarm->update($data);
-
-        return redirect()->route('alarms.index')->with('ok', 'Будильник обновлён.');
     }
+
+    return redirect()->route('alarms.index');
+}
 
     public function destroy(Alarm $alarm)
-    {
-        $alarm->delete();
-        return redirect()->route('alarms.index')->with('ok', 'Будильник удалён.');
+{
+    $alarm->delete();
+
+    if (request()->expectsJson()) {
+        return response()->json(['ok' => true]);
     }
+
+    return redirect()->route('alarms.index')
+        ->with('ok', 'Будильник удалён.');
+}
 
     /**
      * API-проверка: фронт дергает раз в 1 сек.

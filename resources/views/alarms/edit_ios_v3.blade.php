@@ -24,8 +24,44 @@ input{font-size:26px;padding:10px;width:100%;border:1px solid #ddd;border-radius
 <div id="toast" class="toast"></div>
 <script>
 let original={time:'{{ $alarm->time }}',title:'{{ $alarm->title }}'};
+
 function changed(){return time.value!==original.time||title.value!==original.title}
+
+
 function closePage(){if(!changed())history.back();else if(confirm('Сохранить изменения?'))save();else history.back()}
-function save(){fetch('/alarms/{{ $alarm->id }}',{method:'POST',headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}','Content-Type':'application/json'},body:JSON.stringify({_method:'PUT',time:time.value,title:title.value})}).then(()=>history.back())}
+
+
+function save(){
+  fetch(`/alarms/${alarm.id}`, {
+    method: 'PUT',
+    headers: {
+      'X-CSRF-TOKEN': '{{ csrf_token() }}',
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify({
+      time: getTime(),
+      title: alarm.title,
+      note: '',
+      enabled: true
+    })
+  })
+  .then(r => r.json())
+  .then(() => location.href = '/alarms');
+}
+
+function del(){
+  fetch(`/alarms/${alarm.id}`, {
+    method: 'DELETE',
+    headers: {
+      'X-CSRF-TOKEN': '{{ csrf_token() }}',
+      'Accept': 'application/json'
+    }
+  })
+  .then(() => location.href = '/alarms');
+}
+
+
+
 </script>
 @endsection
