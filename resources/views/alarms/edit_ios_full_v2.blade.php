@@ -250,6 +250,7 @@ header,nav,.topbar{display:none!important;}
 
 .modal-actions{
   display:flex;
+  
   justify-content:space-between;
   margin-top:20px;
 }
@@ -316,7 +317,7 @@ header,nav,.topbar{display:none!important;}
   <div class="block" onclick="openDuration()">
   <div class="row">
     <span>Длительность сигнала</span>
-    <span id="durationText">10 мин</span>
+    <span id="durationText">{{ $alarm->duration ?? 10 }} мин</span>
   </div>
   </div>
 
@@ -483,7 +484,8 @@ const originalState = JSON.stringify({
   title: alarm.title,
   note: alarm.note,
   days: days,
-  sound: selectedSound // 
+  sound: selectedSound,
+  duration: selectedDuration
 });
 
 
@@ -756,7 +758,7 @@ function renderDuration(){
 function selectDuration(d){
   selectedDuration = d;
 
-  document.getElementById('durationText').innerText = d + ' мин';
+  document.getElementById('durationText').innerText = selectedDuration + ' мин';
   document.getElementById('durationModal').style.display='none';
   document.body.style.overflow = '';
 }
@@ -767,7 +769,8 @@ function closePage(){
     title: alarm.title,
     note: alarm.note,
     days: days,
-    sound: selectedSound
+    sound: selectedSound,
+    duration: selectedDuration
   });
 
   // если ничего не меняли
