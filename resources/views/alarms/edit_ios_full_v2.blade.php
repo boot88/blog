@@ -250,6 +250,7 @@ header,nav,.topbar{display:none!important;}
 
 .modal-actions{
   display:flex;
+  
   justify-content:space-between;
   margin-top:20px;
 }
@@ -277,6 +278,60 @@ header,nav,.topbar{display:none!important;}
 }
 
 
+
+.slider{
+  position:relative;
+  height:25px;
+  margin:10px 0 20px;
+}
+
+.slider-track{
+  position:absolute;
+  top:14px;
+  left:0;
+  right:0;
+  height:4px;
+  background:#ddd;
+  transform:none;
+  border-radius:2px;
+}
+
+.slider-fill{
+  position:absolute;
+  top:14px;
+  left:0;
+  height:4px;
+  background:#007aff;
+  transform:none;
+  border-radius:2px;
+}
+
+.slider-thumb{
+  position:absolute;
+  top:14px;
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  background:#fff;
+  border:2px solid #ccc;
+  transform:translate(-50%,-50%);
+}
+
+.slider-label{
+  position:absolute;
+  top:26px;
+  transform:translateX(-50%);
+  font-size:12px;
+  color:#8e8e93;
+  white-space:nowrap;
+  cursor:pointer;
+}
+
+.divider{
+  height:1px;
+  background:#eee;
+  margin:20px 0;
+}
 
 
 </style>
@@ -312,13 +367,23 @@ header,nav,.topbar{display:none!important;}
 </div>
 
 <div class="block-group">
-  <div class="block">
-    <div class="row"><span>Длительность сигнала</span><span>10 мин</span></div>
+  
+  <div class="block" onclick="openDuration()">
+  <div class="row">
+    <span>Длительность сигнала</span>
+    <span id="durationText">{{ $alarm->duration ?? 10 }} мин</span>
+  </div>
   </div>
 
-  <div class="block">
-    <div class="row"><span>Длительность паузы</span><span>10 мин ×3</span></div>
+  <div class="block" onclick="openSnooze()">
+  <div class="row">
+    <span>Длительность паузы</span>
+    <span id="snoozeText">
+      {{ $alarm->snooze_duration ?? 10 }} мин, {{ $alarm->snooze_repeats ?? 3 }}х
+    </span>
   </div>
+</div>
+
 </div>
 
 <button class="delete-btn" onclick="del()">Удалить</button>
@@ -337,6 +402,54 @@ header,nav,.topbar{display:none!important;}
     </div>
   </div>
 </div>
+
+<div class="modal" id="durationModal">
+  <div class="modal-overlay"></div>
+
+  <div class="modal-content modern">
+    <div class="modal-title">Длительность сигнала</div>
+
+    <div id="durationList" class="days-list"></div>
+
+    <div class="modal-actions">
+      <button onclick="closeDuration()" class="btn-cancel">Отмена</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal" id="snoozeModal">
+  <div class="modal-overlay"></div>
+
+  <div class="modal-content modern">
+
+    <div class="modal-title" style="font-size:20px;">Длительность паузы</div>
+
+    <div style="color:#888;font-size:13px;margin-bottom:10px;">
+      Длительность паузы (мин)
+    </div>
+
+    <div class="slider" id="durationSlider"></div>
+
+    <div class="divider"></div>
+
+    <div style="color:#888;font-size:13px;margin-bottom:10px;">
+      Количество повторов до автовыключения
+    </div>
+
+    <div class="slider" id="repeatSlider"></div>
+
+    <div class="modal-actions">
+      <button onclick="closeSnooze()" class="btn-cancel">Отмена</button>
+      <div style="width:1px;background:#ddd;height:20px;"></div>
+      <button onclick="applySnooze()" class="btn-ok">ОК</button>
+    </div>
+
+  </div>
+</div>
+
+
+
 
 <div class="modal" id="soundModal">
   <div class="modal-overlay"></div>
@@ -365,6 +478,9 @@ header,nav,.topbar{display:none!important;}
   <input type="hidden" name="enabled" id="formEnabled" value="{{ $alarm->enabled ? 1 : 0 }}">
   <input type="hidden" name="weekdays" id="formWeekdays">
   <input type="hidden" name="sound" id="formSound">
+  <input type="hidden" name="duration" id="formDuration" value="{{ $alarm->duration ?? 10 }}">
+  <input type="hidden" name="snooze_duration" id="formSnoozeDuration" value="{{ $alarm->snooze_duration ?? 10 }}">
+  <input type="hidden" name="snooze_repeats" id="formSnoozeRepeats" value="{{ $alarm->snooze_repeats ?? 3 }}">
   @if($alarm->date)
     <input type="hidden" name="date" id="formDate" value="{{ $alarm->date->format('Y-m-d') }}">
   @endif
@@ -432,6 +548,16 @@ const VISIBLE_ROWS = 5;
 const CENTER_OFFSET = Math.floor(VISIBLE_ROWS / 2);
 const REPEAT_COUNT = 7;
 
+const durations = [1,5,10,15,20,30];
+let selectedDuration = {{ $alarm->duration ?? 10 }};
+let tempDuration = selectedDuration;
+
+const durationSteps = [5,10,15,20,25,30];
+const repeatSteps = [0,1,3,5,10];
+
+let snoozeDuration = {{ $alarm->snooze_duration ?? 10 }};
+let snoozeRepeats = {{ $alarm->snooze_repeats ?? 3 }};
+
 
 let selectedSound = '{{ $alarm->sound ?? "alarm.mp3" }}';
 let days = @json($alarm->weekdays) || [1,1,1,1,1,1,1];
@@ -455,7 +581,10 @@ const originalState = JSON.stringify({
   title: alarm.title,
   note: alarm.note,
   days: days,
-  sound: selectedSound // 
+  sound: selectedSound,
+  duration: selectedDuration,
+  snoozeDuration: snoozeDuration,
+  snoozeRepeats: snoozeRepeats
 });
 
 
@@ -611,7 +740,102 @@ function applyOffset(state){
 }
 
 
+function openSnooze(){
+  document.getElementById('snoozeModal').style.display='flex';
+  document.body.style.overflow='hidden';
+  renderSlider('durationSlider', durationSteps, snoozeDuration, v => snoozeDuration=v);
+  renderSlider('repeatSlider', repeatSteps, snoozeRepeats, v => snoozeRepeats=v);
+}
 
+function closeSnooze(){
+  document.getElementById('snoozeModal').style.display='none';
+  document.body.style.overflow='';
+}
+
+function applySnooze(){
+  document.getElementById('snoozeModal').style.display='none';
+  document.body.style.overflow='';
+
+  document.getElementById('snoozeText').innerText =
+    snoozeDuration + ' мин, ' + snoozeRepeats + 'х';
+}
+
+
+function renderSlider(id, steps, value, onChange){
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+
+  const track = document.createElement('div');
+  track.className = 'slider-track';
+
+  const fill = document.createElement('div');
+  fill.className = 'slider-fill';
+
+  const thumb = document.createElement('div');
+  thumb.className = 'slider-thumb';
+
+  el.appendChild(track);
+  el.appendChild(fill);
+  el.appendChild(thumb);
+
+  function setValueByClientX(clientX){
+    const rect = el.getBoundingClientRect();
+    const x = Math.min(Math.max(clientX - rect.left, 0), rect.width);
+    const percent = rect.width === 0 ? 0 : x / rect.width;
+
+    const index = Math.round(percent * (steps.length - 1));
+    const value = steps[index];
+
+    onChange(value);
+    updateUI(value);
+  }
+
+  function updateUI(v){
+    const index = steps.indexOf(v);
+    const percent = index / (steps.length - 1);
+
+    fill.style.width = `${percent * 100}%`;
+    thumb.style.left = `${percent * 100}%`;
+  }
+
+  updateUI(value);
+
+  // 🔥 КЛИК ПО ЛИНИИ
+  el.onclick = (e) => {
+    setValueByClientX(e.clientX);
+  };
+
+  // 🔥 DRAG
+  let dragging = false;
+
+  thumb.onmousedown = (e) => {
+    dragging = true;
+    e.preventDefault();
+  };
+
+  window.onmousemove = (e) => {
+    if(!dragging) return;
+    setValueByClientX(e.clientX);
+  };
+
+  window.onmouseup = () => dragging = false;
+
+  // подписи
+  steps.forEach((step,i)=>{
+    const label = document.createElement('div');
+    label.className = 'slider-label';
+    label.style.left = `${i/(steps.length-1)*100}%`;
+    label.innerText = step;
+
+    label.onclick = (e)=>{
+      e.stopPropagation();
+      onChange(step);
+      updateUI(step);
+    };
+
+    el.appendChild(label);
+  });
+}
 
 function applySound(){
   selectedSound = tempSound;
@@ -689,6 +913,9 @@ function save(){
   document.getElementById('formNote').value = alarm.note ?? '';
   document.getElementById('formTime').value = getTime();
   document.getElementById('formEnabled').value = alarm.enabled ? '1' : '0';
+  document.getElementById('formDuration').value = selectedDuration;
+  document.getElementById('formSnoozeDuration').value = snoozeDuration;
+  document.getElementById('formSnoozeRepeats').value = snoozeRepeats;
 
   // ✅ сохраняем дни
   document.getElementById('formWeekdays').value = JSON.stringify(days);
@@ -700,13 +927,48 @@ function save(){
   
 }
 
+
+
+function openDuration(){
+  tempDuration = selectedDuration;
+  document.getElementById('durationModal').style.display='flex';
+  document.body.style.overflow = 'hidden';
+  renderDuration();
+}
+
+
+function renderDuration(){
+  const list = document.getElementById('durationList');
+  list.innerHTML = '';
+
+  durations.forEach(d => {
+    list.innerHTML += `
+      <div onclick="selectDuration(${d})">
+        <span>${d} мин</span>
+        <div class="sound-radio ${tempDuration===d?'active':''}"></div>
+      </div>
+    `;
+  });
+}
+
+function selectDuration(d){
+  selectedDuration = d;
+
+  document.getElementById('durationText').innerText = selectedDuration + ' мин';
+  document.getElementById('durationModal').style.display='none';
+  document.body.style.overflow = '';
+}
+
 function closePage(){
   const currentState = JSON.stringify({
     time: getTime(),
     title: alarm.title,
     note: alarm.note,
     days: days,
-    sound: selectedSound
+    sound: selectedSound,
+    duration: selectedDuration,
+    snoozeDuration: snoozeDuration,
+    snoozeRepeats: snoozeRepeats
   });
 
   // если ничего не меняли
@@ -717,6 +979,11 @@ function closePage(){
 
   // если есть изменения
   showConfirmModal();
+}
+
+function closeDuration(){
+  document.getElementById('durationModal').style.display='none';
+  document.body.style.overflow = '';
 }
 
 
