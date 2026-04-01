@@ -177,13 +177,15 @@ header,nav,.topbar{display:none!important;}
   display:flex;
   justify-content:space-between;
   padding:12px 0;
-  border-bottom:1px solid #eee;
+ /*border-bottom:1px solid #eee;*/
   cursor:pointer;
+  align-items:center;
 }
 
+
+
+
 .checkbox{
-  width:20px;
-  height:20px;
   border:2px solid #ccc;
   border-radius:50%; /* круг */
   position:relative;
@@ -191,13 +193,16 @@ header,nav,.topbar{display:none!important;}
 
 /* ДНИ — квадрат */
 .day-checkbox{
+  flex-shrink:0;
   width:20px;
-  height:20px;
-  flex:0 0 20px;
+  /*flex:0 0 20px;*/
   border:2px solid #c7c7cc;
   border-radius:6px; /* ← квадрат со скруглением */
   position:relative;
+
 }
+
+
 
 .day-checkbox.active{
   background:#007aff;
@@ -221,7 +226,7 @@ header,nav,.topbar{display:none!important;}
 /*.day-checkbox,*/
 .sound-radio{
   width:20px;
-  height:20px;
+  background:#fff;
   border:2px solid #c7c7cc;
   border-radius:50%;
   position:relative;
@@ -334,7 +339,7 @@ header,nav,.topbar{display:none!important;}
 </div>
 
 <div class="modal" id="soundModal">
-  <div class="modal-overlay" onclick="closeSound()"></div>
+  <div class="modal-overlay"></div>
 
   <div class="modal-content modern">
     <div class="modal-title">Звук</div>
