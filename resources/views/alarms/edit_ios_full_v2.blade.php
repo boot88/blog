@@ -281,40 +281,50 @@ header,nav,.topbar{display:none!important;}
 
 .slider{
   position:relative;
-  height:40px;
+  height:25px;
   margin:10px 0 20px;
 }
 
 .slider-track{
   position:absolute;
-  top:50%;
+  top:14px;
   left:0;
   right:0;
   height:4px;
   background:#ddd;
-  transform:translateY(-50%);
+  transform:none;
   border-radius:2px;
 }
 
 .slider-fill{
   position:absolute;
-  top:50%;
+  top:14px;
   left:0;
   height:4px;
   background:#007aff;
-  transform:translateY(-50%);
+  transform:none;
   border-radius:2px;
 }
 
 .slider-thumb{
   position:absolute;
-  top:50%;
+  top:14px;
   width:22px;
   height:22px;
   border-radius:50%;
   background:#fff;
   border:2px solid #ccc;
   transform:translate(-50%,-50%);
+}
+
+.slider-label{
+  position:absolute;
+  top:26px;
+  transform:translateX(-50%);
+  font-size:12px;
+  color:#8e8e93;
+  white-space:nowrap;
+  cursor:pointer;
 }
 
 .divider{
@@ -469,6 +479,8 @@ header,nav,.topbar{display:none!important;}
   <input type="hidden" name="weekdays" id="formWeekdays">
   <input type="hidden" name="sound" id="formSound">
   <input type="hidden" name="duration" id="formDuration" value="{{ $alarm->duration ?? 10 }}">
+  <input type="hidden" name="snooze_duration" id="formSnoozeDuration" value="{{ $alarm->snooze_duration ?? 10 }}">
+  <input type="hidden" name="snooze_repeats" id="formSnoozeRepeats" value="{{ $alarm->snooze_repeats ?? 3 }}">
   @if($alarm->date)
     <input type="hidden" name="date" id="formDate" value="{{ $alarm->date->format('Y-m-d') }}">
   @endif
@@ -570,7 +582,9 @@ const originalState = JSON.stringify({
   note: alarm.note,
   days: days,
   sound: selectedSound,
-  duration: selectedDuration
+  duration: selectedDuration,
+  snoozeDuration: snoozeDuration,
+  snoozeRepeats: snoozeRepeats
 });
 
 
@@ -764,29 +778,64 @@ function renderSlider(id, steps, value, onChange){
   el.appendChild(fill);
   el.appendChild(thumb);
 
-  const index = steps.indexOf(value);
-  const percent = index/(steps.length-1);
+  function setValueByClientX(clientX){
+    const rect = el.getBoundingClientRect();
+    const x = Math.min(Math.max(clientX - rect.left, 0), rect.width);
+    const percent = rect.width === 0 ? 0 : x / rect.width;
 
-  fill.style.width = (percent*100)+'%';
-  thumb.style.left = (percent*100)+'%';
+    const index = Math.round(percent * (steps.length - 1));
+    const value = steps[index];
 
+    onChange(value);
+    updateUI(value);
+  }
+
+  function updateUI(v){
+    const index = steps.indexOf(v);
+    const percent = index / (steps.length - 1);
+
+    fill.style.width = `${percent * 100}%`;
+    thumb.style.left = `${percent * 100}%`;
+  }
+
+  updateUI(value);
+
+  // 🔥 КЛИК ПО ЛИНИИ
+  el.onclick = (e) => {
+    setValueByClientX(e.clientX);
+  };
+
+  // 🔥 DRAG
+  let dragging = false;
+
+  thumb.onmousedown = (e) => {
+    dragging = true;
+    e.preventDefault();
+  };
+
+  window.onmousemove = (e) => {
+    if(!dragging) return;
+    setValueByClientX(e.clientX);
+  };
+
+  window.onmouseup = () => dragging = false;
+
+  // подписи
   steps.forEach((step,i)=>{
-    const point = document.createElement('div');
-    point.style.position='absolute';
-    point.style.left=(i/(steps.length-1)*100)+'%';
-    point.style.top='50%';
-    point.style.transform='translate(-50%,10px)';
-    point.innerText=step;
-    point.style.fontSize='12px';
-    el.appendChild(point);
+    const label = document.createElement('div');
+    label.className = 'slider-label';
+    label.style.left = `${i/(steps.length-1)*100}%`;
+    label.innerText = step;
 
-    point.onclick=()=>{
+    label.onclick = (e)=>{
+      e.stopPropagation();
       onChange(step);
-      renderSlider(id,steps,step,onChange);
-    }
+      updateUI(step);
+    };
+
+    el.appendChild(label);
   });
 }
-
 
 function applySound(){
   selectedSound = tempSound;
@@ -917,7 +966,9 @@ function closePage(){
     note: alarm.note,
     days: days,
     sound: selectedSound,
-    duration: selectedDuration
+    duration: selectedDuration,
+    snoozeDuration: snoozeDuration,
+    snoozeRepeats: snoozeRepeats
   });
 
   // если ничего не меняли
