@@ -111,7 +111,19 @@ header,nav,.topbar{display:none!important;}
   display:none;
   z-index:9999;
   align-items:center;
-  justify-content:center;
+ 
+  background: transparent;
+  border: none;
+  
+  /*justify-content: center;*/
+ 
+
+
+
+  
+  
+  
+  
 }
 
 .modal-content{
@@ -138,9 +150,11 @@ header,nav,.topbar{display:none!important;}
 
 
 .modal-overlay{
-  position:absolute;
+  position:fixed;
   inset:0;
   background:rgba(0,0,0,.4);
+  
+  z-index:1;
 }
 
 .modal-content.modern{
@@ -149,6 +163,7 @@ header,nav,.topbar{display:none!important;}
   background:#fff;
   border-radius:20px;
   padding:20px;
+  z-index:2;
 }
 
 .modal-title{
@@ -156,17 +171,21 @@ header,nav,.topbar{display:none!important;}
   margin-bottom:15px;
 }
 
+
+
 .days-list div{
   display:flex;
   justify-content:space-between;
   padding:12px 0;
-  border-bottom:1px solid #eee;
+ /*border-bottom:1px solid #eee;*/
   cursor:pointer;
+  align-items:center;
 }
 
+
+
+
 .checkbox{
-  width:20px;
-  height:20px;
   border:2px solid #ccc;
   border-radius:50%; /* круг */
   position:relative;
@@ -174,13 +193,16 @@ header,nav,.topbar{display:none!important;}
 
 /* ДНИ — квадрат */
 .day-checkbox{
+  flex-shrink:0;
   width:20px;
-  height:20px;
-  flex:0 0 20px;
+  /*flex:0 0 20px;*/
   border:2px solid #c7c7cc;
-  border-radius:4px;
+  border-radius:6px; /* ← квадрат со скруглением */
   position:relative;
+
 }
+
+
 
 .day-checkbox.active{
   background:#007aff;
@@ -188,22 +210,23 @@ header,nav,.topbar{display:none!important;}
 }
 
 .day-checkbox.active::after{
-  content:'✓';
-  color:#fff;
-  font-size:14px;
+  content:'';
   position:absolute;
   top:50%;
   left:50%;
-  transform:translate(-50%,-50%);
+  width:6px;
+  height:10px;
+  border:solid #fff;
+  border-width:0 2px 2px 0;
+  transform:translate(-50%,-50%) rotate(45deg);
 }
 
 
 /* ЗВУК — радио */
-.day-checkbox,
+/*.day-checkbox,*/
 .sound-radio{
   width:20px;
-  height:20px;
-  flex:0 0 20px;
+  background:#fff;
   border:2px solid #c7c7cc;
   border-radius:50%;
   position:relative;
@@ -231,19 +254,14 @@ header,nav,.topbar{display:none!important;}
   margin-top:20px;
 }
 
-.btn-cancel{
+.btn-cancel,
+.btn-ok{
   background:none;
   border:none;
-  color:#666;
+  color:#007aff;
   font-size:16px;
-}
-
-.btn-ok{
-  background:#007aff;
-  color:#fff;
-  border:none;
-  padding:10px 20px;
-  border-radius:10px;
+  font-weight:500;
+  cursor:pointer;
 }
 
 .delete-btn{
@@ -306,7 +324,7 @@ header,nav,.topbar{display:none!important;}
 <button class="delete-btn" onclick="del()">Удалить</button>
 
 <div class="modal" id="daysModal">
-  <div class="modal-overlay" onclick="cancelDays()"></div>
+  <div class="modal-overlay" ></div>
 
   <div class="modal-content modern">
     <div class="modal-title">Дни недели</div>
@@ -321,7 +339,7 @@ header,nav,.topbar{display:none!important;}
 </div>
 
 <div class="modal" id="soundModal">
-  <div class="modal-overlay" onclick="closeSound()"></div>
+  <div class="modal-overlay"></div>
 
   <div class="modal-content modern">
     <div class="modal-title">Звук</div>
@@ -592,14 +610,18 @@ function applyOffset(state){
   state.inner.style.transform = `translateY(${state.offsetY}px)`;
 }
 
+
+
+
 function applySound(){
-  selectedSound = tempSound; // 
+  selectedSound = tempSound;
 
   const name = sounds.find(s=>s.file===selectedSound).name;
   document.getElementById('soundText').innerText = name;
 
   document.getElementById('soundModal').style.display='none';
 }
+
 
 function snapToNearest(state){
   const rawIndex = -(state.offsetY / ITEM_HEIGHT) + CENTER_OFFSET;
@@ -703,6 +725,7 @@ function closePage(){
 function openDays(){
   tempDays = [...days];
   document.getElementById('daysModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden'; // 🔥 ВАЖНО
   renderDays();
 }
 
@@ -712,6 +735,7 @@ function applyDays(){
   days = [...tempDays];
   updateDaysText();
   document.getElementById('daysModal').style.display = 'none';
+  document.body.style.overflow = ''; // 🔥 вернуть
 }
 
 function closeDays(){
@@ -720,6 +744,7 @@ function closeDays(){
 
 function cancelDays(){
   document.getElementById('daysModal').style.display = 'none';
+  document.body.style.overflow = ''; // 🔥 вернуть
 }
 
 
@@ -761,7 +786,7 @@ if(currentSound){
 }
 
 function openSound(){
-  tempSound = selectedSound; // 🔥 копия
+  tempSound = selectedSound;
   document.getElementById('soundModal').style.display='flex';
   renderSounds();
 }
@@ -835,15 +860,14 @@ function selectSound(file){
   renderSounds();
 
   // меняем текст "по умолчанию"
-  const name = sounds.find(s=>s.file===file).name;
-  document.getElementById('soundText').innerText = name;
+  //const name = sounds.find(s=>s.file===file).name;
+  //document.getElementById('soundText').innerText = name;
 }
+
+
 
 function closeSound(){
   document.getElementById('soundModal').style.display='none';
-
-  // 🔥 откат
-  tempSound = selectedSound;
 
   if(currentAudio){
     currentAudio.pause();
@@ -852,6 +876,8 @@ function closeSound(){
 
   playingFile = null;
 }
+
+
 
 function editDescription(){
   const t = prompt('Описание', alarm.title ?? '');
