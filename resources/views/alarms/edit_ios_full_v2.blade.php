@@ -279,6 +279,50 @@ header,nav,.topbar{display:none!important;}
 
 
 
+.slider{
+  position:relative;
+  height:40px;
+  margin:10px 0 20px;
+}
+
+.slider-track{
+  position:absolute;
+  top:50%;
+  left:0;
+  right:0;
+  height:4px;
+  background:#ddd;
+  transform:translateY(-50%);
+  border-radius:2px;
+}
+
+.slider-fill{
+  position:absolute;
+  top:50%;
+  left:0;
+  height:4px;
+  background:#007aff;
+  transform:translateY(-50%);
+  border-radius:2px;
+}
+
+.slider-thumb{
+  position:absolute;
+  top:50%;
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  background:#fff;
+  border:2px solid #ccc;
+  transform:translate(-50%,-50%);
+}
+
+.divider{
+  height:1px;
+  background:#eee;
+  margin:20px 0;
+}
+
 
 </style>
 
@@ -321,9 +365,14 @@ header,nav,.topbar{display:none!important;}
   </div>
   </div>
 
-  <div class="block">
-    <div class="row"><span>Длительность паузы</span><span>10 мин ×3</span></div>
+  <div class="block" onclick="openSnooze()">
+  <div class="row">
+    <span>Длительность паузы</span>
+    <span id="snoozeText">
+      {{ $alarm->snooze_duration ?? 10 }} мин, {{ $alarm->snooze_repeats ?? 3 }}х
+    </span>
   </div>
+</div>
 
 </div>
 
@@ -355,6 +404,37 @@ header,nav,.topbar{display:none!important;}
     <div class="modal-actions">
       <button onclick="closeDuration()" class="btn-cancel">Отмена</button>
     </div>
+  </div>
+</div>
+
+
+<div class="modal" id="snoozeModal">
+  <div class="modal-overlay"></div>
+
+  <div class="modal-content modern">
+
+    <div class="modal-title" style="font-size:20px;">Длительность паузы</div>
+
+    <div style="color:#888;font-size:13px;margin-bottom:10px;">
+      Длительность паузы (мин)
+    </div>
+
+    <div class="slider" id="durationSlider"></div>
+
+    <div class="divider"></div>
+
+    <div style="color:#888;font-size:13px;margin-bottom:10px;">
+      Количество повторов до автовыключения
+    </div>
+
+    <div class="slider" id="repeatSlider"></div>
+
+    <div class="modal-actions">
+      <button onclick="closeSnooze()" class="btn-cancel">Отмена</button>
+      <div style="width:1px;background:#ddd;height:20px;"></div>
+      <button onclick="applySnooze()" class="btn-ok">ОК</button>
+    </div>
+
   </div>
 </div>
 
@@ -460,6 +540,11 @@ const durations = [1,5,10,15,20,30];
 let selectedDuration = {{ $alarm->duration ?? 10 }};
 let tempDuration = selectedDuration;
 
+const durationSteps = [5,10,15,20,25,30];
+const repeatSteps = [0,1,3,5,10];
+
+let snoozeDuration = {{ $alarm->snooze_duration ?? 10 }};
+let snoozeRepeats = {{ $alarm->snooze_repeats ?? 3 }};
 
 
 let selectedSound = '{{ $alarm->sound ?? "alarm.mp3" }}';
@@ -641,6 +726,66 @@ function applyOffset(state){
 }
 
 
+function openSnooze(){
+  document.getElementById('snoozeModal').style.display='flex';
+  document.body.style.overflow='hidden';
+  renderSlider('durationSlider', durationSteps, snoozeDuration, v => snoozeDuration=v);
+  renderSlider('repeatSlider', repeatSteps, snoozeRepeats, v => snoozeRepeats=v);
+}
+
+function closeSnooze(){
+  document.getElementById('snoozeModal').style.display='none';
+  document.body.style.overflow='';
+}
+
+function applySnooze(){
+  document.getElementById('snoozeModal').style.display='none';
+  document.body.style.overflow='';
+
+  document.getElementById('snoozeText').innerText =
+    snoozeDuration + ' мин, ' + snoozeRepeats + 'х';
+}
+
+
+function renderSlider(id, steps, value, onChange){
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+
+  const track = document.createElement('div');
+  track.className = 'slider-track';
+
+  const fill = document.createElement('div');
+  fill.className = 'slider-fill';
+
+  const thumb = document.createElement('div');
+  thumb.className = 'slider-thumb';
+
+  el.appendChild(track);
+  el.appendChild(fill);
+  el.appendChild(thumb);
+
+  const index = steps.indexOf(value);
+  const percent = index/(steps.length-1);
+
+  fill.style.width = (percent*100)+'%';
+  thumb.style.left = (percent*100)+'%';
+
+  steps.forEach((step,i)=>{
+    const point = document.createElement('div');
+    point.style.position='absolute';
+    point.style.left=(i/(steps.length-1)*100)+'%';
+    point.style.top='50%';
+    point.style.transform='translate(-50%,10px)';
+    point.innerText=step;
+    point.style.fontSize='12px';
+    el.appendChild(point);
+
+    point.onclick=()=>{
+      onChange(step);
+      renderSlider(id,steps,step,onChange);
+    }
+  });
+}
 
 
 function applySound(){
@@ -720,6 +865,8 @@ function save(){
   document.getElementById('formTime').value = getTime();
   document.getElementById('formEnabled').value = alarm.enabled ? '1' : '0';
   document.getElementById('formDuration').value = selectedDuration;
+  document.getElementById('formSnoozeDuration').value = snoozeDuration;
+  document.getElementById('formSnoozeRepeats').value = snoozeRepeats;
 
   // ✅ сохраняем дни
   document.getElementById('formWeekdays').value = JSON.stringify(days);

@@ -34,6 +34,8 @@ class AlarmController extends Controller
            'weekdays' => ['nullable'],
            'sound' => ['nullable','string'],
            'duration' => ['nullable','integer'],
+           'snooze_duration' => ['nullable','integer'],
+           'snooze_repeats' => ['nullable','integer'],
         ]);
         
         $data['weekdays'] = $request->filled('weekdays')
@@ -66,6 +68,8 @@ class AlarmController extends Controller
         'weekdays' => ['nullable'],
         'sound' => ['nullable','string'],
         'duration' => ['nullable','integer'],
+        'snooze_duration' => ['nullable','integer'],
+        'snooze_repeats' => ['nullable','integer'],
         
     ]);
     
@@ -76,6 +80,9 @@ class AlarmController extends Controller
     $data['sound'] = $request->input('sound');
     
     $data['duration'] = $request->input('duration', 10);
+    
+    $data['snooze_duration'] = $request->input('snooze_duration', 10);
+    $data['snooze_repeats'] = $request->input('snooze_repeats', 3);
     
     $data['enabled'] = array_key_exists('enabled', $data)
         ? (bool)$data['enabled']
