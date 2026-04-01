@@ -312,13 +312,18 @@ header,nav,.topbar{display:none!important;}
 </div>
 
 <div class="block-group">
-  <div class="block">
-    <div class="row"><span>Длительность сигнала</span><span>10 мин</span></div>
+  
+  <div class="block" onclick="openDuration()">
+  <div class="row">
+    <span>Длительность сигнала</span>
+    <span id="durationText">10 мин</span>
+  </div>
   </div>
 
   <div class="block">
     <div class="row"><span>Длительность паузы</span><span>10 мин ×3</span></div>
   </div>
+
 </div>
 
 <button class="delete-btn" onclick="del()">Удалить</button>
@@ -337,6 +342,23 @@ header,nav,.topbar{display:none!important;}
     </div>
   </div>
 </div>
+
+<div class="modal" id="durationModal">
+  <div class="modal-overlay"></div>
+
+  <div class="modal-content modern">
+    <div class="modal-title">Длительность сигнала</div>
+
+    <div id="durationList" class="days-list"></div>
+
+    <div class="modal-actions">
+      <button onclick="closeDuration()" class="btn-cancel">Отмена</button>
+    </div>
+  </div>
+</div>
+
+
+
 
 <div class="modal" id="soundModal">
   <div class="modal-overlay"></div>
@@ -365,6 +387,7 @@ header,nav,.topbar{display:none!important;}
   <input type="hidden" name="enabled" id="formEnabled" value="{{ $alarm->enabled ? 1 : 0 }}">
   <input type="hidden" name="weekdays" id="formWeekdays">
   <input type="hidden" name="sound" id="formSound">
+  <input type="hidden" name="duration" id="formDuration" value="{{ $alarm->duration ?? 10 }}">
   @if($alarm->date)
     <input type="hidden" name="date" id="formDate" value="{{ $alarm->date->format('Y-m-d') }}">
   @endif
@@ -431,6 +454,11 @@ const ITEM_HEIGHT = 40;
 const VISIBLE_ROWS = 5;
 const CENTER_OFFSET = Math.floor(VISIBLE_ROWS / 2);
 const REPEAT_COUNT = 7;
+
+const durations = [1,5,10,15,20,30];
+let selectedDuration = {{ $alarm->duration ?? 10 }};
+let tempDuration = selectedDuration;
+
 
 
 let selectedSound = '{{ $alarm->sound ?? "alarm.mp3" }}';
@@ -689,6 +717,7 @@ function save(){
   document.getElementById('formNote').value = alarm.note ?? '';
   document.getElementById('formTime').value = getTime();
   document.getElementById('formEnabled').value = alarm.enabled ? '1' : '0';
+  document.getElementById('formDuration').value = selectedDuration;
 
   // ✅ сохраняем дни
   document.getElementById('formWeekdays').value = JSON.stringify(days);
@@ -698,6 +727,38 @@ function save(){
   
   document.getElementById('formSound').value = selectedSound;
   
+}
+
+
+
+function openDuration(){
+  tempDuration = selectedDuration;
+  document.getElementById('durationModal').style.display='flex';
+  document.body.style.overflow = 'hidden';
+  renderDuration();
+}
+
+
+function renderDuration(){
+  const list = document.getElementById('durationList');
+  list.innerHTML = '';
+
+  durations.forEach(d => {
+    list.innerHTML += `
+      <div onclick="selectDuration(${d})">
+        <span>${d} мин</span>
+        <div class="sound-radio ${tempDuration===d?'active':''}"></div>
+      </div>
+    `;
+  });
+}
+
+function selectDuration(d){
+  selectedDuration = d;
+
+  document.getElementById('durationText').innerText = d + ' мин';
+  document.getElementById('durationModal').style.display='none';
+  document.body.style.overflow = '';
 }
 
 function closePage(){
@@ -717,6 +778,11 @@ function closePage(){
 
   // если есть изменения
   showConfirmModal();
+}
+
+function closeDuration(){
+  document.getElementById('durationModal').style.display='none';
+  document.body.style.overflow = '';
 }
 
 
