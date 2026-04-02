@@ -1174,8 +1174,62 @@ function discardChanges(){
   window.location.href = '/alarms';
 }
 
+function startAlarmWatcher(){
+  setInterval(() => {
+    const now = new Date();
+    const currentTime = now.toTimeString().slice(0,5);
 
-console.log(pickers);
+    if(currentTime === alarm.time){
+      triggerAlarm();
+    }
+  }, 1000);
+}
+
+startAlarmWatcher();
+
+
+function triggerAlarm(){
+  console.log('⏰ Будильник!');
+
+  //showAlarmModal(); // UI окно
+
+  playAlarmLoop();
+}
+
+
+let alarmAudio;
+
+function playAlarmLoop(){
+  alarmAudio = new Audio('/sounds/' + selectedSound);
+  alarmAudio.loop = true;
+
+  alarmAudio.play().catch(() => {
+    console.log('❌ звук заблокирован');
+  });
+}
+
+
+function stopAlarm(){
+  if(alarmAudio){
+    alarmAudio.pause();
+    alarmAudio.currentTime = 0;
+  }
+}
+
+function snoozeAlarm(){
+  stopAlarm();
+
+  setTimeout(() => {
+    playAlarmLoop();
+  }, snoozeDuration * 60 * 1000);
+}
+
+
+document.body.addEventListener('click', () => {
+  new Audio('/sound/alarm.mp3').play().then(a => a.pause()).catch(()=>{});
+}, { once:true });
+
+//console.log(pickers);
 //document.getElementById('m').style.background = 'red';
 
 </script>
