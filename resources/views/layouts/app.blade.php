@@ -120,6 +120,8 @@
             backdrop.style.display = 'flex';
 
             // звук
+            const file = (alarm.sound || 'alarm.mp3').replace(/[^a-zA-Z0-9._-]/g, '');
+            audio.src = `/sounds/${file}`;
             audio.currentTime = 0;
             audio.play().catch(()=>{ /* может быть заблокировано */ });
 
