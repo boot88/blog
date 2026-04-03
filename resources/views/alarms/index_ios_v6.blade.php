@@ -86,7 +86,7 @@ function toggleClock(){
 function drawClock(){
   const canvas=document.getElementById('clockCanvas');
   const ctx=canvas.getContext('2d');
-  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Novosibirsk' }));
+  const now = getNowInAlarmTimezone();
   ctx.clearRect(0,0,160,160);
 
   let grad=ctx.createRadialGradient(80,80,60,80,80,80);
@@ -133,17 +133,49 @@ function drawClock(){
 }
 setInterval(drawClock,1000);drawClock();
 
+function getNowInAlarmTimezone() {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Novosibirsk' }));
+}
+
+function getWeekdayIndexMondayFirst(date) {
+  return (date.getDay() + 6) % 7; // JS: 0=Sun ... 6=Sat => 0=Mon ... 6=Sun
+}
+
+function getNextAlarmDiffMs(alarm, now) {
+  if (!alarm.enabled) return null;
+
+  const [h, m] = alarm.time.split(':').map(Number);
+  const days = Array.isArray(alarm.weekdays) ? alarm.weekdays : [1,1,1,1,1,1,1];
+  const hasActiveDays = days.some(Boolean);
+
+  if (!hasActiveDays) return null;
+
+  let bestDiff = null;
+
+  for (let shift = 0; shift < 7; shift++) {
+    const candidate = new Date(now);
+    candidate.setDate(candidate.getDate() + shift);
+    candidate.setHours(h, m, 0, 0);
+
+    const weekday = getWeekdayIndexMondayFirst(candidate);
+    if (!days[weekday]) continue;
+
+    const diff = candidate - now;
+    if (diff >= 0 && (bestDiff === null || diff < bestDiff)) {
+      bestDiff = diff;
+    }
+  }
+
+  return bestDiff;
+}
+
 function computeNextText(){
-  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Novosibirsk' }));
+  const now = getNowInAlarmTimezone();
   let minDiff=null;
 
   alarms.forEach(a=>{
-    if(!a.enabled) return;
-    const [h,m]=a.time.split(':');
-    let t=new Date();
-    t.setHours(h,m,0,0);
-    if(t<now) t.setDate(t.getDate()+1);
-    const diff=t-now;
+    const diff = getNextAlarmDiffMs(a, now);
+    if(diff===null) return;
     if(minDiff===null || diff<minDiff) minDiff=diff;
   });
 
@@ -184,16 +216,9 @@ function toggle(el,id){
 
   if(isActive){
     const alarm = alarms.find(a => a.id === id);
-
-    const now = new Date();
-    const [h, m] = alarm.time.split(':');
-
-    let t = new Date();
-    t.setHours(h, m, 0, 0);
-
-    if(t < now) t.setDate(t.getDate() + 1);
-
-    let diff = t - now;
+    const now = getNowInAlarmTimezone();
+    const diff = getNextAlarmDiffMs(alarm, now);
+    if(diff===null) return;
 
     let sec = Math.floor(diff / 1000);
     let d = Math.floor(sec / 86400); sec %= 86400;
@@ -223,7 +248,7 @@ function toggle(el,id){
 
     document.body.appendChild(toast);
 
-    setTimeout(()=>toast.remove(),2000);
+    setTimeout(()=>toast.remove(),3000);
   }
 }
 
