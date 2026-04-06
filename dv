@@ -1,0 +1,122 @@
+[33mcommit 21af57ae3a17f5fe44816670e73274638916e6ec[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mblog-1.2[m[33m, [m[1;31morigin/blog-1.2[m[33m)[m
+Merge: ea489f1 50e4b19
+Author: boot88 <116805971+boot88@users.noreply.github.com>
+Date:   Fri Apr 3 18:06:08 2026 +0700
+
+    codex/fix-alarm-time-calculation-and-weekdays
+    
+    Учитывать дни недели при расчёте следующего срабатывания будильника (index_ios_v6)
+
+[33mcommit 50e4b190f1db0d384b03780e15820bf85c96482f[m[33m ([m[1;31morigin/codex/fix-alarm-time-calculation-and-weekdays[m[33m)[m
+Author: boot88 <116805971+boot88@users.noreply.github.com>
+Date:   Fri Apr 3 18:04:59 2026 +0700
+
+    Fix next alarm timing to respect weekdays
+
+[33mcommit ea489f1cca6dafe1682ef77856d60ec04c86961a[m[33m ([m[1;32mfix-weekdays-click-v2[m[33m)[m
+Author: John <povisok888@gmail.com>
+Date:   Thu Apr 2 14:36:22 2026 +0700
+
+    sdcds
+
+[33mcommit eda57e1fb2a20a54b1d13a029193b082213a0527[m
+Author: John <povisok888@gmail.com>
+Date:   Wed Apr 1 16:41:51 2026 +0700
+
+    norm 3
+
+[33mcommit 66460f9a772e9304a54953579894ff441a0de53a[m
+Author: John <povisok888@gmail.com>
+Date:   Wed Apr 1 16:06:49 2026 +0700
+
+    Add snooze duration slider and repeats UI (iOS style)
+
+[33mcommit eff48aa5a4e574430174a3edbcc26992fb542664[m
+Author: John <povisok888@gmail.com>
+Date:   Wed Apr 1 12:50:49 2026 +0700
+
+    duration 2
+
+[33mcommit e41f599108ec63e84503b0f988a163d93ea8dfa4[m
+Author: John <povisok888@gmail.com>
+Date:   Wed Apr 1 12:22:33 2026 +0700
+
+    dutation
+
+[33mcommit 64225f493094e7ba1024e81d0bb30c0c1c8224cf[m
+Author: John <povisok888@gmail.com>
+Date:   Wed Apr 1 11:25:34 2026 +0700
+
+    Рабочие дни недели и звук
+
+[33mcommit 823a12fef9f539820762c3d1e94b2f82c7b2bf3c[m
+Author: John <povisok888@gmail.com>
+Date:   Wed Apr 1 10:50:39 2026 +0700
+
+    2
+
+[33mcommit e36006ffb0bd58c48dedabd8b7ea3571390fdcf8[m
+Author: boot88 <116805971+boot88@users.noreply.github.com>
+Date:   Tue Mar 31 12:14:06 2026 +0700
+
+    Add files via upload
+
+[33mcommit 8059ed7446f0446c78f3adb9c142db69e3e4db70[m
+Author: boot88 <116805971+boot88@users.noreply.github.com>
+Date:   Tue Mar 31 11:54:58 2026 +0700
+
+    Add files via upload
+
+[33mcommit 1b7c4b0a686ad9e363b503fd44f286fdb4333d96[m
+Merge: a95786c f69903c
+Author: boot88 <116805971+boot88@users.noreply.github.com>
+Date:   Mon Mar 30 10:21:29 2026 +0700
+
+    Merge pull request #1 from boot88/fix-delete-alarm-test
+    
+    Fix delete alarm test
+
+[33mcommit f69903c65aad0bc67f3680ff7175a1a38380cedf[m
+Author: John <povisok888@gmail.com>
+Date:   Fri Mar 27 17:25:02 2026 +0700
+
+    Fix sound cancel behavior
+    
+    - Added tempSound state
+    - Prevent immediate sound selection
+    - Apply sound only on OK
+    - Restore previous sound on cancel
+
+[33mcommit 948d306f1caa607f24ae3586dc5505ca80be8e9b[m
+Author: John <povisok888@gmail.com>
+Date:   Fri Mar 27 16:29:23 2026 +0700
+
+    Fix edit alarm UI and sound logic
+    
+    - Fixed day checkbox stretching (square shape)
+    - Fixed modal centering (use flex display)
+    - Fixed missing playingFile state
+    - Corrected sound radio buttons
+    - Fixed play/pause logic per sound
+    - Fixed broken HTML in days list
+    - Reset audio state on modal close
+
+[33mcommit 5bf49f93448b3f48fbeddccf3d974cb76867b1ab[m
+Author: John <povisok888@gmail.com>
+Date:   Fri Mar 27 12:47:02 2026 +0700
+
+    Add sound selection and improve edit UI
+    
+    - Styled values in dark gray (iOS-like)
+    - Implemented sound selection modal
+    - Added preview and saving of selected sound
+
+[33mcommit 6b67e29ce5223841397829a74084e23f5bff28f3[m
+Author: John <povisok888@gmail.com>
+Date:   Fri Mar 27 12:45:14 2026 +0700
+
+    Add sound selection and improve edit UI
+    
+    - Styled values in dark gray (iOS-like)
+    - Implemented sound selection modal
+    - Added preview and saving of selected sound
