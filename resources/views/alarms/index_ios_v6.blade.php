@@ -76,6 +76,8 @@ h1+div{display:none!important}
 <script>
 let digital=false;
 let alarms=@json($alarms);
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+const toggleUrlTemplate = @json(route('alarms.toggle-enabled', ['alarm' => '__ALARM_ID__']));
 
 function toggleClock(){
   digital=!digital;
@@ -203,16 +205,41 @@ setInterval(computeNextText,60000);
 
 
 
-function toggle(el,id){
+async function toggle(el,id){
   el.classList.toggle('active');
   const row=el.closest('.alarm');
   row.classList.toggle('disabled');
 
   const isActive = el.classList.contains('active');
+  const previousState = !isActive;
 
   alarms = alarms.map(a=> a.id===id ? {...a, enabled: isActive} : a);
 
   computeNextText();
+
+  try{
+    const toggleUrl = toggleUrlTemplate.replace('__ALARM_ID__', String(id));
+    const res = await fetch(toggleUrl, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-TOKEN': csrfToken
+      },
+      body: JSON.stringify({ enabled: isActive ? 1 : 0 })
+    });
+
+    if(!res.ok){
+      throw new Error('toggle request failed');
+    }
+  }catch(err){
+    el.classList.toggle('active', previousState);
+    row.classList.toggle('disabled', !previousState);
+    alarms = alarms.map(a=> a.id===id ? {...a, enabled: previousState} : a);
+    computeNextText();
+    return;
+  }
 
   if(isActive){
     const alarm = alarms.find(a => a.id === id);

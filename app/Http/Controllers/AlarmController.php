@@ -154,4 +154,22 @@ class AlarmController extends Controller
             ])->values(),
         ]);
     }
+
+    public function toggleEnabled(Request $request, Alarm $alarm)
+    {
+        $data = $request->validate([
+            'enabled' => ['required', 'boolean'],
+        ]);
+
+        $alarm->enabled = (bool) $data['enabled'];
+        $alarm->save();
+
+        return response()->json([
+            'ok' => true,
+            'alarm' => [
+                'id' => $alarm->id,
+                'enabled' => (bool) $alarm->enabled,
+            ],
+        ]);
+    }
 }
