@@ -119,27 +119,48 @@ class AlarmController extends Controller
      */
     public function due(Request $request)
     {
-        $tz = config('app.timezone');
-        $now = Carbon::now($tz);
+        $appTz = config('app.timezone');
+        $now = Carbon::now($appTz);
+        $triggeredAt = Carbon::now('UTC');
 
-        $today = $now->format('Y-m-d');
-        $time = $now->format('H:i');
-
-        // Будильники:
-        // - включены
-        // - либо на сегодня (date = today), либо ежедневные (date is null)
-        // - время = текущее H:i
         $alarms = Alarm::query()
             ->where('enabled', true)
-            ->where('time', $time)
-            ->where(function ($q) use ($today) {
-                $q->whereNull('date')->orWhere('date', $today);
-            })
             ->get();
 
-        // Чтобы не “дребезжало” при обновлениях — отметим last_triggered_at (раз в минуту)
+        $alarms = $alarms->filter(function (Alarm $alarm) {
+            $alarmTz = $alarm->timezone ?: config('app.timezone');
+            $alarmNow = Carbon::now($alarmTz);
+            $today = $alarmNow->format('Y-m-d');
+            $time = $alarmNow->format('H:i');
+            $weekDayIndex = $alarmNow->isoWeekday() - 1; // 0=пн ... 6=вс
+
+            if ($alarm->time !== $time) {
+                return false;
+            }
+
+            $days = $alarm->weekdays;
+            if (is_array($days) && count($days) === 7 && array_sum(array_map('intval', $days)) > 0) {
+                if (empty($days[$weekDayIndex])) {
+                    return false;
+                }
+            }
+
+            if ($alarm->date && $alarm->date->format('Y-m-d') !== $today) {
+                return false;
+            }
+
+            if ($alarm->last_triggered_at) {
+                $lastTriggeredAt = $alarm->last_triggered_at->copy()->timezone($alarmTz);
+                if ($lastTriggeredAt->format('Y-m-d H:i') === $alarmNow->format('Y-m-d H:i')) {
+                    return false;
+                }
+            }
+
+            return true;
+        })->values();
+
         foreach ($alarms as $alarm) {
-            $alarm->last_triggered_at = $now;
+            $alarm->last_triggered_at = $triggeredAt;
             $alarm->save();
         }
 
@@ -151,6 +172,7 @@ class AlarmController extends Controller
                 'note' => $a->note,
                 'date' => $a->date?->format('Y-m-d'),
                 'time' => $a->time,
+                'sound' => $a->sound,
             ])->values(),
         ]);
     }
