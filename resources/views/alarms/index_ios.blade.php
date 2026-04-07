@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Будильники (iOS UI)')
+@section('title', 'Задачи (iOS UI)')
 
 @section('content')
 

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Будильники')
+@section('title', 'Задачи')
 
 @section('content')
 
@@ -84,7 +84,7 @@ body {
 }
 </style>
 
-<div class="header">Будильники</div>
+<div class="header">Задачи</div>
 
 <div>
 @foreach($alarms as $alarm)

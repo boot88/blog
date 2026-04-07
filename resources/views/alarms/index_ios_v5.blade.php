@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title','Будильники')
+@section('title','Задачи')
 @section('content')
 <style>
 body{background:#f5f5f7;color:#000}
@@ -36,7 +36,7 @@ font-size:28px;
 .add-btn{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);width:70px;height:70px;border-radius:50%;background:#34c759;display:flex;align-items:center;justify-content:center;font-size:36px;color:white}
 </style>
 
-<div class="header">Будильники</div>
+<div class="header">Задачи</div>
 
 <div class="clock-wrap" onclick="toggleClock()">
 
