@@ -47,7 +47,7 @@
         <div class="modal">
             <div class="row" style="justify-content:space-between;align-items:flex-start">
                 <div>
-                    <h2 id="alarmTitle">Будильник2</h2>
+                    <h2 id="alarmTitle">Задача</h2>
                     <div id="alarmNote" class="muted"></div>
                     <div id="alarmMeta" class="muted" style="margin-top:8px;font-size:12px"></div>
                 </div>
@@ -113,13 +113,14 @@
         }
 
         function openModal(alarm, nowIso){
-            alarmTitle.textContent = alarm.title || 'Будильник';
+            alarmTitle.textContent = alarm.title || 'Задача';
             alarmNote.textContent = alarm.note || 'Напоминание без описания.';
             alarmMeta.textContent = `Сработал: ${new Date(nowIso).toLocaleString()}`;
 
             backdrop.style.display = 'flex';
 
             // звук
+            audio.pause();
             audio.currentTime = 0;
             audio.play().catch(()=>{ /* может быть заблокировано */ });
 
@@ -131,6 +132,7 @@
         }
 
         async function checkDue(){
+            if (backdrop.style.display === 'flex') return;
             try{
                 const res = await fetch(dueUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
                 if(!res.ok) return;
