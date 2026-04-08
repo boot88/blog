@@ -1,5 +1,5 @@
 {
-  "name": "Задачи",
+  "name": "Будильники",
   "short_name": "Будильник",
   "start_url": "/alarms",
   "scope": "/",

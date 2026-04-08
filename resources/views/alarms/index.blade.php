@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Задачи')
-@section('header', 'Задачи')
+@section('title', 'Будильники')
+@section('header', 'Будильники')
 
 @section('content')
     <div class="card">
@@ -51,8 +51,8 @@
 @endsection
 @extends('layouts.app')
 
-@section('title', 'Задачи')
-@section('header', 'Задачи')
+@section('title', 'Будильники')
+@section('header', 'Будильники')
 
 @section('content')
     <div class="card">

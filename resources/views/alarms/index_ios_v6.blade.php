@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title','Задачи')
+@section('title','Будильники')
 @section('content')
 <style>
 body{background:#f5f5f7;color:#000}
@@ -31,7 +31,7 @@ h1+div{display:none!important}
 .add-btn{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);width:70px;height:70px;border-radius:50%;background:#34c759;display:flex;align-items:center;justify-content:center;font-size:36px;color:white}
 </style>
 
-<div class="header">Задачи</div>
+<div class="header">Будильники</div>
 
 <div class="clock-wrap" onclick="toggleClock()">
   <div class="clock-box">
@@ -183,7 +183,7 @@ function computeNextText(){
 
   const el=document.getElementById('nextText');
   if(minDiff===null){
-    el.innerText='Нет включённых задач';
+    el.innerText='Нет включенных будильников';
     return;
   }
 

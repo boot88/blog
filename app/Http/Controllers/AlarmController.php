@@ -20,18 +20,7 @@ class AlarmController extends Controller
 
     public function create()
     {
-        $alarm = new Alarm([
-            'title' => 'Новая задача',
-            'time' => now()->format('H:i'),
-            'enabled' => true,
-            'weekdays' => [1,1,1,1,1,1,1],
-            'sound' => 'alarm.mp3',
-            'duration' => 10,
-            'snooze_duration' => 10,
-            'snooze_repeats' => 3,
-        ]);
-
-        return view('alarms.edit_ios_full_v2', compact('alarm'));
+        return view('alarms.create');
     }
 
     public function store(Request $request)
@@ -60,7 +49,7 @@ class AlarmController extends Controller
 
         Alarm::create($data);
 
-        return redirect()->route('alarms.index')->with('ok', 'Задача создана.');
+        return redirect()->route('alarms.index')->with('ok', 'Будильник создан.');
     }
 
     public function edit(Alarm $alarm)
@@ -121,7 +110,7 @@ class AlarmController extends Controller
     }
 
     return redirect()->route('alarms.index')
-        ->with('ok', 'Задача удалена.');
+        ->with('ok', 'Будильник удалён.');
 }
 
     /**
@@ -136,7 +125,7 @@ class AlarmController extends Controller
         $today = $now->format('Y-m-d');
         $time = $now->format('H:i');
 
-        // Задачи:
+        // Будильники:
         // - включены
         // - либо на сегодня (date = today), либо ежедневные (date is null)
         // - время = текущее H:i
