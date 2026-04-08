@@ -1193,8 +1193,5 @@ function discardChanges(){
   window.location.href = '/alarms';
 }
 
-//console.log(pickers);
-//document.getElementById('m').style.background = 'red';
-
 </script>
 @endsection
