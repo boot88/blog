@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 
 class AlarmController extends Controller
 {
+    private const DEFAULT_ALARM_TIMEZONE = 'Asia/Novosibirsk';
+
     public function index()
     {
         $alarms = Alarm::orderByDesc('enabled')
@@ -29,6 +31,7 @@ class AlarmController extends Controller
             'duration' => 10,
             'snooze_duration' => 10,
             'snooze_repeats' => 3,
+            'timezone' => self::DEFAULT_ALARM_TIMEZONE,
         ]);
 
         return view('alarms.edit_ios_full_v2', compact('alarm'));
@@ -56,7 +59,7 @@ class AlarmController extends Controller
         
         
         $data['enabled'] = (bool)($data['enabled'] ?? false);
-        $data['timezone'] = config('app.timezone');
+        $data['timezone'] = self::DEFAULT_ALARM_TIMEZONE;
 
         Alarm::create($data);
 
@@ -130,38 +133,62 @@ class AlarmController extends Controller
      */
     public function due(Request $request)
     {
-        $tz = config('app.timezone');
-        $now = Carbon::now($tz);
+        $appNow = Carbon::now(config('app.timezone'));
+        $triggeredAt = Carbon::now('UTC');
 
-        $today = $now->format('Y-m-d');
-        $time = $now->format('H:i');
-
-        // Задачи:
-        // - включены
-        // - либо на сегодня (date = today), либо ежедневные (date is null)
-        // - время = текущее H:i
         $alarms = Alarm::query()
             ->where('enabled', true)
-            ->where('time', $time)
-            ->where(function ($q) use ($today) {
-                $q->whereNull('date')->orWhere('date', $today);
-            })
             ->get();
 
-        // Чтобы не “дребезжало” при обновлениях — отметим last_triggered_at (раз в минуту)
+        $alarms = $alarms->filter(function (Alarm $alarm) {
+            $alarmTimezone = $alarm->timezone;
+            if (!$alarmTimezone || strtoupper($alarmTimezone) === 'UTC') {
+                $alarmTimezone = self::DEFAULT_ALARM_TIMEZONE;
+            }
+            $alarmNow = Carbon::now($alarmTimezone);
+
+            if ($alarm->time !== $alarmNow->format('H:i')) {
+                return false;
+            }
+
+            if ($alarm->date && $alarm->date->format('Y-m-d') !== $alarmNow->format('Y-m-d')) {
+                return false;
+            }
+
+            $weekdays = is_array($alarm->weekdays) ? $alarm->weekdays : [1,1,1,1,1,1,1];
+            $weekdayIndex = $alarmNow->isoWeekday() - 1; // 0=пн ... 6=вс
+
+            if (count($weekdays) === 7 && empty($weekdays[$weekdayIndex])) {
+                return false;
+            }
+
+            if ($alarm->last_triggered_at) {
+                $lastTriggeredAt = $alarm->last_triggered_at->copy()->timezone($alarmTimezone);
+                if ($lastTriggeredAt->format('Y-m-d H:i') === $alarmNow->format('Y-m-d H:i')) {
+                    return false;
+                }
+            }
+
+            return true;
+        })->values();
+
         foreach ($alarms as $alarm) {
-            $alarm->last_triggered_at = $now;
+            $alarm->last_triggered_at = $triggeredAt;
             $alarm->save();
         }
 
         return response()->json([
-            'now' => $now->toIso8601String(),
+            'now' => $appNow->toIso8601String(),
             'alarms' => $alarms->map(fn($a) => [
                 'id' => $a->id,
                 'title' => $a->title,
                 'note' => $a->note,
                 'date' => $a->date?->format('Y-m-d'),
                 'time' => $a->time,
+                'sound' => $a->sound ?: 'alarm.mp3',
+                'duration' => (int) ($a->duration ?: 10),
+                'snooze_duration' => (int) ($a->snooze_duration ?: 10),
+                'snooze_repeats' => (int) ($a->snooze_repeats ?: 0),
             ])->values(),
         ]);
     }
