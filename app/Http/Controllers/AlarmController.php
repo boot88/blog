@@ -185,6 +185,10 @@ class AlarmController extends Controller
                 'note' => $a->note,
                 'date' => $a->date?->format('Y-m-d'),
                 'time' => $a->time,
+                'sound' => $a->sound ?: 'alarm.mp3',
+                'duration' => (int) ($a->duration ?: 10),
+                'snooze_duration' => (int) ($a->snooze_duration ?: 10),
+                'snooze_repeats' => (int) ($a->snooze_repeats ?: 0),
             ])->values(),
         ]);
     }
