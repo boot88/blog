@@ -10,6 +10,16 @@ h1+div{display:none!important}
 .clock-box{width:190px;height:190px;position:relative}
 #digital{position:absolute;top:0;left:0;width:190px;height:190px;display:flex;align-items:center;justify-content:center;font-size:30px}
 .next{color:#3c3c43;margin-top:14px}
+.alarm-list{margin-top:14px;border-top:1px solid #ececec}
+.alarm{display:flex;justify-content:space-between;align-items:center;padding:14px 4px;border-bottom:1px solid #eee;cursor:pointer}
+.alarm.disabled{opacity:.5}
+.alarm-time{font-size:36px;font-weight:300;line-height:1}
+.alarm-note{font-size:13px;color:#6e6e73}
+.toggle{width:50px;height:28px;background:#666;border-radius:20px;position:relative;cursor:pointer;flex:0 0 auto}
+.toggle.active{background:#34c759}
+.toggle::after{content:'';width:24px;height:24px;background:white;border-radius:50%;position:absolute;top:2px;left:2px;transition:.2s}
+.toggle.active::after{left:24px}
+.alarm-add{margin-top:12px}
 
 .feed{background:#fff;border:1px solid #e5e5ea;border-radius:18px;padding:14px}
 .feed-tools{display:flex;gap:8px;align-items:center;margin-bottom:10px}
@@ -41,6 +51,20 @@ h1+div{display:none!important}
       </div>
     </div>
     <div class="next" id="nextText"></div>
+    <div class="alarm-list">
+      @foreach($alarms as $alarm)
+      <div class="alarm {{ $alarm->enabled?'':'disabled' }}" data-id="{{ $alarm->id }}" onclick="editAlarm({{ $alarm->id }})">
+        <div>
+          <div class="alarm-time">{{ substr($alarm->time,0,5) }}</div>
+          <div class="alarm-note">{{ $alarm->title }}</div>
+        </div>
+        <div class="toggle {{ $alarm->enabled?'active':'' }}" onclick="event.stopPropagation();toggleAlarm(this,{{ $alarm->id }})"></div>
+      </div>
+      @endforeach
+    </div>
+    <div class="alarm-add">
+      <a href="/alarms/create" class="btn-mini" style="background:#34c759;border-color:#34c759;color:#fff">+ Добавить будильник</a>
+    </div>
   </div>
 
   <aside class="feed">
@@ -81,6 +105,7 @@ h1+div{display:none!important}
 let digital=false;
 let alarms=@json($alarms);
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+const toggleUrlTemplate = @json(route('alarms.toggle-enabled', ['alarm' => '__ALARM_ID__']));
 const categories = ['Все','Общие','Финанс','Програмные','Партнёрки','Системные'];
 let selectedCategory = 'Все';
 const categoryKey = 'alarm_categories_v1';
@@ -151,6 +176,40 @@ function renderTaskList(){
   }
 
   document.getElementById('taskCount').innerText = `Показано: ${Math.min(data.length, 5)} из ${data.length}`;
+}
+
+async function toggleAlarm(el,id){
+  el.classList.toggle('active');
+  const row=el.closest('.alarm');
+  row.classList.toggle('disabled');
+  const isActive = el.classList.contains('active');
+  const previousState = !isActive;
+  alarms = alarms.map(a=> Number(a.id)===Number(id) ? {...a, enabled: isActive} : a);
+  computeNextText();
+
+  try{
+    const toggleUrl = toggleUrlTemplate.replace('__ALARM_ID__', String(id));
+    const res = await fetch(toggleUrl, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-TOKEN': csrfToken
+      },
+      body: JSON.stringify({ enabled: isActive ? 1 : 0 })
+    });
+    if(!res.ok) throw new Error('toggle request failed');
+  }catch(err){
+    el.classList.toggle('active', previousState);
+    row.classList.toggle('disabled', !previousState);
+    alarms = alarms.map(a=> Number(a.id)===Number(id) ? {...a, enabled: previousState} : a);
+    computeNextText();
+  }
+}
+
+function editAlarm(id){
+  window.location = `/alarms/${id}/edit`;
 }
 
 function setCategory(cat){
@@ -225,9 +284,11 @@ async function removeTask(id){
     });
     if(!res.ok) throw new Error('delete failed');
     alarms = alarms.filter(a => Number(a.id) !== Number(id));
+    document.querySelector(`.alarm[data-id="${id}"]`)?.remove();
     delete categoryMap[String(id)];
     persistCategories();
     renderTaskList();
+    computeNextText();
   }catch(e){}
 }
 
