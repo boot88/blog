@@ -1,0 +1,72 @@
+From 158eee3c6e23662561a565929ef26e3cf3a35b26 Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Thu, 2 Apr 2026 09:55:36 +0000
+Subject: [PATCH] Use per-alarm timezone in due alarm matching
+
+---
+ app/Http/Controllers/AlarmController.php | 30 ++++++++++++++----------
+ 1 file changed, 18 insertions(+), 12 deletions(-)
+
+diff --git a/app/Http/Controllers/AlarmController.php b/app/Http/Controllers/AlarmController.php
+index e86f86b..a8c206b 100755
+--- a/app/Http/Controllers/AlarmController.php
++++ b/app/Http/Controllers/AlarmController.php
+@@ -119,20 +119,22 @@ public function destroy(Alarm $alarm)
+      */
+     public function due(Request $request)
+     {
+-        $tz = config('app.timezone');
+-        $now = Carbon::now($tz);
+-
+-        $today = $now->format('Y-m-d');
+-        $time = $now->format('H:i');
+-        $weekDayIndex = $now->isoWeekday() - 1; // 0=пн ... 6=вс
++        $appTz = config('app.timezone');
++        $now = Carbon::now($appTz);
++        $triggeredAt = Carbon::now('UTC');
+
+         $alarms = Alarm::query()
+             ->where('enabled', true)
+-            ->where('time', $time)
+             ->get();
+
+-        $alarms = $alarms->filter(function (Alarm $alarm) use ($today, $weekDayIndex, $now, $tz) {
+-            if ($alarm->date && $alarm->date->format('Y-m-d') !== $today) {
++        $alarms = $alarms->filter(function (Alarm $alarm) {
++            $alarmTz = $alarm->timezone ?: config('app.timezone');
++            $alarmNow = Carbon::now($alarmTz);
++            $today = $alarmNow->format('Y-m-d');
++            $time = $alarmNow->format('H:i');
++            $weekDayIndex = $alarmNow->isoWeekday() - 1; // 0=пн ... 6=вс
++
++            if ($alarm->time !== $time) {
+                 return false;
+             }
+
+@@ -143,9 +145,13 @@ public function due(Request $request)
+                 }
+             }
+
++            if ($alarm->date && $alarm->date->format('Y-m-d') !== $today) {
++                return false;
++            }
++
+             if ($alarm->last_triggered_at) {
+-                $lastTriggeredAt = $alarm->last_triggered_at->copy()->timezone($tz);
+-                if ($lastTriggeredAt->format('Y-m-d H:i') === $now->format('Y-m-d H:i')) {
++                $lastTriggeredAt = $alarm->last_triggered_at->copy()->timezone($alarmTz);
++                if ($lastTriggeredAt->format('Y-m-d H:i') === $alarmNow->format('Y-m-d H:i')) {
+                     return false;
+                 }
+             }
+@@ -154,7 +160,7 @@ public function due(Request $request)
+         })->values();
+
+         foreach ($alarms as $alarm) {
+-            $alarm->last_triggered_at = $now;
++            $alarm->last_triggered_at = $triggeredAt;
+             $alarm->save();
+         }
+
+--
+2.43.0

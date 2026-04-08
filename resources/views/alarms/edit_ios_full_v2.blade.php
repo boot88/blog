@@ -1,6 +1,19 @@
 @extends('layouts.app')
-@php $noHeader = true; @endphp
-@section('title', 'Изменить будильник')
+@php
+  $noHeader = true;
+  $isCreate = !$alarm->exists;
+  $pageTitle = $isCreate ? 'Добавить задачу' : 'Изменить задачу';
+  $initialTitle = $alarm->title ?: 'Новая задача';
+  $initialNote = $alarm->note ?? '';
+  $initialTime = $alarm->time ? substr($alarm->time, 0, 5) : now()->format('H:i');
+  $initialEnabled = $alarm->enabled ?? true;
+  $initialWeekdays = $alarm->weekdays ?: [1,1,1,1,1,1,1];
+  $initialDuration = $alarm->duration ?? 10;
+  $initialSnoozeDuration = $alarm->snooze_duration ?? 10;
+  $initialSnoozeRepeats = $alarm->snooze_repeats ?? 3;
+  $initialSound = $alarm->sound ?? 'alarm.mp3';
+@endphp
+@section('title', $pageTitle)
 @section('content')
 <style>
 body{
@@ -338,7 +351,7 @@ header,nav,.topbar{display:none!important;}
 
 <div class="header">
   <div class="header-btn" onclick="closePage()">✕</div>
-  <div class="header-title">Изменить будильник</div>
+  <div class="header-title">{{ $pageTitle }}</div>
   <div class="header-btn" onclick="save()">✔</div>
 </div>
 
@@ -363,7 +376,7 @@ header,nav,.topbar{display:none!important;}
 </div>
 
 <div class="block" onclick="editDescription()">
-  <div class="row"><span>Описание</span><span id="descriptionText">{{ $alarm->title }}</span></div>
+  <div class="row"><span>Описание</span><span id="descriptionText">{{ $initialTitle }}</span></div>
 </div>
 
 <div class="block-group">
@@ -371,7 +384,7 @@ header,nav,.topbar{display:none!important;}
   <div class="block" onclick="openDuration()">
   <div class="row">
     <span>Длительность сигнала</span>
-    <span id="durationText">{{ $alarm->duration ?? 10 }} мин</span>
+    <span id="durationText">{{ $initialDuration }} мин</span>
   </div>
   </div>
 
@@ -379,14 +392,16 @@ header,nav,.topbar{display:none!important;}
   <div class="row">
     <span>Длительность паузы</span>
     <span id="snoozeText">
-      {{ $alarm->snooze_duration ?? 10 }} мин, {{ $alarm->snooze_repeats ?? 3 }}х
+      {{ $initialSnoozeDuration }} мин, {{ $initialSnoozeRepeats }}х
     </span>
   </div>
 </div>
 
 </div>
 
+@if(!$isCreate)
 <button class="delete-btn" onclick="del()">Удалить</button>
+@endif
 
 <div class="modal" id="daysModal">
   <div class="modal-overlay" ></div>
@@ -469,27 +484,31 @@ header,nav,.topbar{display:none!important;}
 
 <div class="toast" id="toast"></div>
 
-<form id="saveForm" method="POST" action="{{ route('alarms.update', $alarm) }}" style="display:none;">
+<form id="saveForm" method="POST" action="{{ $isCreate ? route('alarms.store') : route('alarms.update', $alarm) }}" style="display:none;">
   @csrf
+  @unless($isCreate)
   @method('PUT')
-  <input type="hidden" name="title" id="formTitle" value="{{ $alarm->title }}">
-  <input type="hidden" name="note" id="formNote" value="{{ $alarm->note ?? '' }}">
-  <input type="hidden" name="time" id="formTime" value="{{ substr($alarm->time, 0, 5) }}">
-  <input type="hidden" name="enabled" id="formEnabled" value="{{ $alarm->enabled ? 1 : 0 }}">
+  @endunless
+  <input type="hidden" name="title" id="formTitle" value="{{ $initialTitle }}">
+  <input type="hidden" name="note" id="formNote" value="{{ $initialNote }}">
+  <input type="hidden" name="time" id="formTime" value="{{ $initialTime }}">
+  <input type="hidden" name="enabled" id="formEnabled" value="{{ $initialEnabled ? 1 : 0 }}">
   <input type="hidden" name="weekdays" id="formWeekdays">
   <input type="hidden" name="sound" id="formSound">
-  <input type="hidden" name="duration" id="formDuration" value="{{ $alarm->duration ?? 10 }}">
-  <input type="hidden" name="snooze_duration" id="formSnoozeDuration" value="{{ $alarm->snooze_duration ?? 10 }}">
-  <input type="hidden" name="snooze_repeats" id="formSnoozeRepeats" value="{{ $alarm->snooze_repeats ?? 3 }}">
-  @if($alarm->date)
+  <input type="hidden" name="duration" id="formDuration" value="{{ $initialDuration }}">
+  <input type="hidden" name="snooze_duration" id="formSnoozeDuration" value="{{ $initialSnoozeDuration }}">
+  <input type="hidden" name="snooze_repeats" id="formSnoozeRepeats" value="{{ $initialSnoozeRepeats }}">
+  @if(!$isCreate && $alarm->date)
     <input type="hidden" name="date" id="formDate" value="{{ $alarm->date->format('Y-m-d') }}">
   @endif
 </form>
 
+@unless($isCreate)
 <form id="deleteForm" method="POST" action="{{ route('alarms.destroy', $alarm) }}" style="display:none;">
   @csrf
   @method('DELETE')
 </form>
+@endunless
 
 <div id="confirmModal" style="
   position:fixed;
@@ -549,18 +568,18 @@ const CENTER_OFFSET = Math.floor(VISIBLE_ROWS / 2);
 const REPEAT_COUNT = 7;
 
 const durations = [1,5,10,15,20,30];
-let selectedDuration = {{ $alarm->duration ?? 10 }};
+let selectedDuration = {{ $initialDuration }};
 let tempDuration = selectedDuration;
 
 const durationSteps = [5,10,15,20,25,30];
 const repeatSteps = [0,1,3,5,10];
 
-let snoozeDuration = {{ $alarm->snooze_duration ?? 10 }};
-let snoozeRepeats = {{ $alarm->snooze_repeats ?? 3 }};
+let snoozeDuration = {{ $initialSnoozeDuration }};
+let snoozeRepeats = {{ $initialSnoozeRepeats }};
 
 
-let selectedSound = '{{ $alarm->sound ?? "alarm.mp3" }}';
-let days = @json($alarm->weekdays) || [1,1,1,1,1,1,1];
+let selectedSound = @json($initialSound);
+let days = @json($initialWeekdays) || [1,1,1,1,1,1,1];
 
 let tempSound = selectedSound;
 
@@ -568,11 +587,11 @@ let currentAudio = null;
 let playingFile = null;
 
 const alarm = {
-  id: {{ $alarm->id }},
-  time: '{{ substr($alarm->time, 0, 5) }}',
-  title: @json($alarm->title),
-  note: @json($alarm->note ?? ''),
-  enabled: {{ $alarm->enabled ? 'true' : 'false' }},
+  id: @json($alarm->id),
+  time: @json($initialTime),
+  title: @json($initialTitle),
+  note: @json($initialNote),
+  enabled: {{ $initialEnabled ? 'true' : 'false' }},
   date: @json(optional($alarm->date)->format('Y-m-d'))
 };
 
@@ -920,7 +939,7 @@ function save(){
   // ✅ сохраняем дни
   document.getElementById('formWeekdays').value = JSON.stringify(days);
 
-  showToast('Сохранение...');
+  showToast('Сохранение задачи...');
   setTimeout(() => document.getElementById('saveForm').submit(), 150);
   
   document.getElementById('formSound').value = selectedSound;
@@ -1155,7 +1174,7 @@ function editDescription(){
 }
 
 function del(){
-  if (!confirm('Удалить?')) return;
+  if (!confirm('Удалить задачу?')) return;
 
   showToast('Удаление...');
   setTimeout(() => document.getElementById('deleteForm').submit(), 150);
@@ -1173,10 +1192,6 @@ function hideConfirm(){
 function discardChanges(){
   window.location.href = '/alarms';
 }
-
-
-//console.log(pickers);
-//document.getElementById('m').style.background = 'red';
 
 </script>
 @endsection

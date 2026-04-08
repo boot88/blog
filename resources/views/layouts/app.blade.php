@@ -27,7 +27,7 @@
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:14px">
         
         @if(!isset($noHeader))
-        <h1 style="margin:0">@yield('header', 'Будильники')</h1>
+        <h1 style="margin:0">@yield('header', 'Задачи')</h1>
         <div class="row">
             <a class="btn" href="{{ route('alarms.index') }}">Список</a>
             <a class="btn btn-primary" href="{{ route('alarms.create') }}">+ Добавить</a>
