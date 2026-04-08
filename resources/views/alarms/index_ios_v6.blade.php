@@ -11,7 +11,7 @@ h1+div{display:none!important}
 #digital{position:absolute;top:0;left:0;width:190px;height:190px;display:flex;align-items:center;justify-content:center;font-size:30px}
 .next{color:#3c3c43;margin-top:14px}
 .alarm-list{margin-top:14px;border-top:1px solid #ececec}
-.alarm{display:flex;justify-content:space-between;align-items:center;padding:14px 4px;border-bottom:1px solid #eee;cursor:pointer}
+.alarm{display:flex;justify-content:flex-start;align-items:center;gap:12px;padding:14px 4px;border-bottom:1px solid #eee;cursor:pointer}
 .alarm.disabled{opacity:.5}
 .alarm-time{font-size:36px;font-weight:300;line-height:1}
 .alarm-note{font-size:13px;color:#6e6e73}
@@ -54,11 +54,11 @@ h1+div{display:none!important}
     <div class="alarm-list">
       @foreach($alarms as $alarm)
       <div class="alarm {{ $alarm->enabled?'':'disabled' }}" data-id="{{ $alarm->id }}" onclick="editAlarm({{ $alarm->id }})">
+        <div class="toggle {{ $alarm->enabled?'active':'' }}" onclick="event.stopPropagation();toggleAlarm(this,{{ $alarm->id }})"></div>
         <div>
           <div class="alarm-time">{{ substr($alarm->time,0,5) }}</div>
           <div class="alarm-note">{{ $alarm->title }}</div>
         </div>
-        <div class="toggle {{ $alarm->enabled?'active':'' }}" onclick="event.stopPropagation();toggleAlarm(this,{{ $alarm->id }})"></div>
       </div>
       @endforeach
     </div>
@@ -70,7 +70,7 @@ h1+div{display:none!important}
   <aside class="feed">
     <div class="feed-tools">
       <input id="searchInput" placeholder="Поиск по слову...">
-      <button class="btn-mini" onclick="openQuickAdd()">+ Добавить</button>
+      <button class="btn-mini" onclick="openQuickAdd()">+ Добавить задачу</button>
     </div>
     <div id="catChips" class="cats"></div>
     <div id="taskList" class="task-list"></div>
@@ -85,7 +85,6 @@ h1+div{display:none!important}
       <input id="quickTitle" placeholder="Название задачи">
     </div>
     <div class="quick-row">
-      <input id="quickTime" type="time">
       <select id="quickCategory">
         <option>Общие</option>
         <option>Финанс</option>
@@ -108,29 +107,11 @@ const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribut
 const toggleUrlTemplate = @json(route('alarms.toggle-enabled', ['alarm' => '__ALARM_ID__']));
 const categories = ['Все','Общие','Финанс','Програмные','Партнёрки','Системные'];
 let selectedCategory = 'Все';
-const categoryKey = 'alarm_categories_v1';
-const pendingKey = 'alarm_pending_category_v1';
-let categoryMap = JSON.parse(localStorage.getItem(categoryKey) || '{}');
+const taskKey = 'side_tasks_v1';
+let tasks = JSON.parse(localStorage.getItem(taskKey) || '[]');
 
-reconcilePendingCategory();
-
-function persistCategories(){
-  localStorage.setItem(categoryKey, JSON.stringify(categoryMap));
-}
-
-function reconcilePendingCategory(){
-  const pendingRaw = localStorage.getItem(pendingKey);
-  if (!pendingRaw) return;
-  try{
-    const pending = JSON.parse(pendingRaw);
-    const sorted = [...alarms].sort((a,b) => sortKey(b) - sortKey(a));
-    const match = sorted.find(a => String(a.title) === String(pending.title) && String(a.time).slice(0,5) === String(pending.time));
-    if (match && !categoryMap[String(match.id)]) {
-      categoryMap[String(match.id)] = pending.category || 'Общие';
-      persistCategories();
-    }
-  }catch(e){}
-  localStorage.removeItem(pendingKey);
+function persistTasks(){
+  localStorage.setItem(taskKey, JSON.stringify(tasks));
 }
 
 function sortKey(a){
@@ -138,15 +119,11 @@ function sortKey(a){
   return Number(a.id || 0);
 }
 
-function alarmCategory(a){
-  return categoryMap[String(a.id)] || 'Общие';
-}
-
 function filteredAlarms(){
   const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
-  return [...alarms]
-    .filter(a => selectedCategory === 'Все' || alarmCategory(a) === selectedCategory)
-    .filter(a => !q || `${a.title || ''} ${a.note || ''}`.toLowerCase().includes(q))
+  return [...tasks]
+    .filter(a => selectedCategory === 'Все' || a.category === selectedCategory)
+    .filter(a => !q || `${a.title || ''}`.toLowerCase().includes(q))
     .sort((a,b) => sortKey(b) - sortKey(a));
 }
 
@@ -168,9 +145,9 @@ function renderTaskList(){
       <div class="task">
         <div>
           <div class="task-title">${escapeHtml(a.title || 'Без названия')}</div>
-          <div class="task-meta">${escapeHtml(String(a.time || '').slice(0,5))} · ${escapeHtml(alarmCategory(a))}</div>
+          <div class="task-meta">${new Date(a.created_at).toLocaleString('ru-RU')} · ${escapeHtml(a.category || 'Общие')}</div>
         </div>
-        <button class="task-del" onclick="removeTask(${a.id})">Удалить</button>
+        <button class="task-del" onclick="removeTask('${a.id}')">Удалить</button>
       </div>
     `).join('');
   }
@@ -232,7 +209,6 @@ function escapeHtml(value){
 }
 
 function openQuickAdd(){
-  document.getElementById('quickTime').value = new Date().toTimeString().slice(0,5);
   document.getElementById('quickTitle').value = '';
   document.getElementById('quickCategory').value = 'Общие';
   document.getElementById('quickModal').style.display='flex';
@@ -243,53 +219,25 @@ function closeQuickAdd(){
 
 async function quickAdd(){
   const title = (document.getElementById('quickTitle').value || '').trim();
-  const time = document.getElementById('quickTime').value;
   const category = document.getElementById('quickCategory').value || 'Общие';
-  if (!title || !time) return;
+  if (!title) return;
 
-  localStorage.setItem(pendingKey, JSON.stringify({title, time, category}));
-
-  const payload = new URLSearchParams();
-  payload.set('_token', csrfToken);
-  payload.set('title', title);
-  payload.set('time', time);
-  payload.set('enabled', '1');
-  payload.set('weekdays', JSON.stringify([1,1,1,1,1,1,1]));
-  payload.set('sound', 'alarm.mp3');
-  payload.set('duration', '10');
-  payload.set('snooze_duration', '10');
-  payload.set('snooze_repeats', '3');
-
-  await fetch('/alarms', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest'},
-    body: payload.toString()
+  tasks.push({
+    id: `task-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+    title,
+    category,
+    created_at: new Date().toISOString(),
   });
-
-  location.reload();
+  persistTasks();
+  closeQuickAdd();
+  renderTaskList();
 }
 
 async function removeTask(id){
   if (!confirm('Удалить задачу?')) return;
-  try{
-    const res = await fetch(`/alarms/${id}`, {
-      method: 'POST',
-      headers: {
-        'X-CSRF-TOKEN': csrfToken,
-        'X-Requested-With': 'XMLHttpRequest',
-        'Accept': 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: new URLSearchParams({_method:'DELETE'}).toString()
-    });
-    if(!res.ok) throw new Error('delete failed');
-    alarms = alarms.filter(a => Number(a.id) !== Number(id));
-    document.querySelector(`.alarm[data-id="${id}"]`)?.remove();
-    delete categoryMap[String(id)];
-    persistCategories();
-    renderTaskList();
-    computeNextText();
-  }catch(e){}
+  tasks = tasks.filter(t => String(t.id) !== String(id));
+  persistTasks();
+  renderTaskList();
 }
 
 function toggleClock(){
