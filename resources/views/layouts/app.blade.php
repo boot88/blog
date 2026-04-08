@@ -100,16 +100,32 @@
         const stopBtn = document.getElementById('alarmStop');
         const audio = document.getElementById('alarmAudio');
 
-        // чтобы не показывать один и тот же будильник много раз в ту же минуту
-        const firedKey = 'alarms_fired_v1';
+        // чтобы не показывать один и тот же сигнал много раз в ту же минуту
+        // для ежедневных задач ключ должен быть привязан к текущей дате,
+        // иначе после первого срабатывания задача больше никогда не прозвонит.
+        const firedKey = 'alarms_fired_v2';
         const fired = JSON.parse(localStorage.getItem(firedKey) || '{}'); // { "alarmId|YYYY-MM-DD|HH:MM": true }
 
-        function markFired(id, date, time){
-            fired[`${id}|${date||'daily'}|${time}`] = true;
+        function resolveFireDate(alarmDate, nowIso){
+            if (alarmDate) return alarmDate; // разовая задача
+            const now = new Date(nowIso || Date.now());
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const d = String(now.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`; // ежедневная задача: ключ на текущий день
+        }
+
+        function makeFireKey(id, date, time, nowIso){
+            return `${id}|${resolveFireDate(date, nowIso)}|${time}`;
+        }
+
+        function markFired(id, date, time, nowIso){
+            fired[makeFireKey(id, date, time, nowIso)] = true;
             localStorage.setItem(firedKey, JSON.stringify(fired));
         }
-        function isFired(id, date, time){
-            return !!fired[`${id}|${date||'daily'}|${time}`];
+
+        function isFired(id, date, time, nowIso){
+            return !!fired[makeFireKey(id, date, time, nowIso)];
         }
 
         function openModal(alarm, nowIso){
@@ -139,14 +155,15 @@
                 const data = await res.json();
 
                 for(const alarm of (data.alarms || [])){
-                    if (isFired(alarm.id, alarm.date, alarm.time)) continue;
-                    markFired(alarm.id, alarm.date, alarm.time);
+                    if (isFired(alarm.id, alarm.date, alarm.time, data.now)) continue;
+                    markFired(alarm.id, alarm.date, alarm.time, data.now);
                     openModal(alarm, data.now);
                     break; // один за раз
                 }
             }catch(e){}
         }
 
+        checkDue();
         setInterval(checkDue, 1000);
 
         // Пуш-уведомления (по желанию)
