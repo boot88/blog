@@ -118,7 +118,7 @@ header,nav,.topbar{display:none!important;}
 
 
 
-.modal{
+.sheet-modal{
   position:fixed;
   inset:0;
   display:none;
@@ -139,7 +139,7 @@ header,nav,.topbar{display:none!important;}
   
 }
 
-.modal-content{
+.sheet-modal-content{
   background:#fff;
   padding:20px;
   border-radius:12px;
@@ -162,7 +162,7 @@ header,nav,.topbar{display:none!important;}
 
 
 
-.modal-overlay{
+.sheet-modal-overlay{
   position:fixed;
   inset:0;
   background:rgba(0,0,0,.4);
@@ -170,7 +170,7 @@ header,nav,.topbar{display:none!important;}
   z-index:1;
 }
 
-.modal-content.modern{
+.sheet-modal-content.modern{
   position:relative;
   width:min(400px, calc(100% - 24px));
   background:#fff;
@@ -403,10 +403,10 @@ header,nav,.topbar{display:none!important;}
 <button class="delete-btn" onclick="del()">Удалить</button>
 @endif
 
-<div class="modal" id="daysModal">
-  <div class="modal-overlay" ></div>
+<div class="sheet-modal" id="daysModal">
+  <div class="sheet-modal-overlay" ></div>
 
-  <div class="modal-content modern">
+  <div class="sheet-modal-content modern">
     <div class="modal-title">Дни недели</div>
 
     <div id="daysList" class="days-list"></div>
@@ -418,10 +418,10 @@ header,nav,.topbar{display:none!important;}
   </div>
 </div>
 
-<div class="modal" id="durationModal">
-  <div class="modal-overlay"></div>
+<div class="sheet-modal" id="durationModal">
+  <div class="sheet-modal-overlay"></div>
 
-  <div class="modal-content modern">
+  <div class="sheet-modal-content modern">
     <div class="modal-title">Длительность сигнала</div>
 
     <div id="durationList" class="days-list"></div>
@@ -433,10 +433,10 @@ header,nav,.topbar{display:none!important;}
 </div>
 
 
-<div class="modal" id="snoozeModal">
-  <div class="modal-overlay"></div>
+<div class="sheet-modal" id="snoozeModal">
+  <div class="sheet-modal-overlay"></div>
 
-  <div class="modal-content modern">
+  <div class="sheet-modal-content modern">
 
     <div class="modal-title" style="font-size:20px;">Длительность паузы</div>
 
@@ -466,10 +466,10 @@ header,nav,.topbar{display:none!important;}
 
 
 
-<div class="modal" id="soundModal">
-  <div class="modal-overlay"></div>
+<div class="sheet-modal" id="soundModal">
+  <div class="sheet-modal-overlay"></div>
 
-  <div class="modal-content modern">
+  <div class="sheet-modal-content modern">
     <div class="modal-title">Звук</div>
 
     <div id="soundList" class="days-list"></div>

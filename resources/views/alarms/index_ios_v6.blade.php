@@ -1,288 +1,177 @@
 @extends('layouts.app')
-@section('title','Будильники')
+@section('title', 'Будильники и задачи')
+@section('header', 'Будильники')
+
+@section('page-actions')
+    <a class="btn" href="{{ route('items.index', 'tasks') }}">Все задачи</a>
+    <a class="btn btn-primary" href="{{ route('alarms.create') }}">+ Будильник</a>
+@endsection
+
 @section('content')
 <style>
-body{background:#f5f5f7;color:#000}
-h1+div{display:none!important}
-.header{text-align:center;font-size:28px;margin-bottom:10px}
-
-.clock-wrap{display:flex;align-items:center;justify-content:flex-start;gap:20px;margin:20px}
-.clock-box{width:160px;height:160px;position:relative}
-#digital{position:absolute;top:0;left:0;width:160px;height:160px;display:flex;align-items:center;justify-content:center;font-size:28px}
-
-.next{color:#000;margin:0 20px 20px 20px; /* слева под часами */}
-
-
-
-
-.alarm{display:flex;justify-content:space-between;align-items:center;padding:18px;border-bottom:1px solid #ddd;background:white}
-.alarm.disabled{opacity:.5}
-.time{font-size:44px;font-weight:300}
-.label{color:#555}
-
-
-
-
-.toggle{width:50px;height:28px;background:#666;border-radius:20px;position:relative;cursor:pointer}
-.toggle.active{background:#34c759}
-.toggle::after{content:'';width:24px;height:24px;background:white;border-radius:50%;position:absolute;top:2px;left:2px;transition:.2s}
-.toggle.active::after{left:24px}
-
-.add-btn{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);width:70px;height:70px;border-radius:50%;background:#34c759;display:flex;align-items:center;justify-content:center;font-size:36px;color:white}
+    .dashboard{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,420px);gap:18px;align-items:start}
+    .clock-panel,.task-panel{background:#fff;border:1px solid #e5e5ea;border-radius:18px;padding:18px}
+    .clock-wrap{display:flex;align-items:center;justify-content:center;min-height:210px;cursor:pointer}
+    .clock-box{width:190px;height:190px;position:relative}
+    #digital{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-size:30px;font-weight:300}
+    .next{color:#3c3c43;margin:8px 0 14px;text-align:center}
+    .alarm-list{border-top:1px solid #ececec}
+    .alarm{display:flex;align-items:center;gap:12px;padding:14px 4px;border-bottom:1px solid #eee;cursor:pointer}
+    .alarm.disabled{opacity:.5}.alarm-time{font-size:34px;font-weight:300;line-height:1}.alarm-note{font-size:13px;color:#6e6e73;margin-top:3px}
+    .toggle{width:50px;height:28px;background:#8e8e93;border-radius:20px;position:relative;cursor:pointer;flex:0 0 auto}
+    .toggle.active{background:#34c759}.toggle::after{content:'';width:24px;height:24px;background:#fff;border-radius:50%;position:absolute;top:2px;left:2px;transition:.2s}.toggle.active::after{left:24px}
+    .task-tools{display:flex;gap:8px;align-items:center;margin-bottom:10px}.task-tools input{flex:1}
+    .chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}
+    .chip{border:1px solid #d1d1d6;background:#fff;color:#1c1c1e;padding:7px 10px;border-radius:999px;font-size:12px;cursor:pointer;white-space:nowrap}.chip.active{background:#007aff;border-color:#007aff;color:#fff}
+    .task-list{max-height:500px;overflow:auto;border-top:1px solid #eee}
+    .task{display:flex;justify-content:space-between;gap:10px;padding:12px 2px;border-bottom:1px solid #f0f0f0}.task-main{min-width:0}.task-title{font-weight:650;overflow-wrap:anywhere}.task-meta{font-size:12px;color:#6e6e73;margin-top:4px}.task-actions{display:flex;gap:5px;align-items:flex-start}.icon-btn{border:1px solid #d1d1d6;background:#fff;border-radius:9px;padding:6px 8px;cursor:pointer;color:#3c3c43}.icon-btn.danger{color:#c62828;border-color:#ffd6d3;background:#fff1f0}
+    .panel-footer{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:#6e6e73}
+    .quick-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:10020;padding:12px}.quick-overlay{position:absolute;inset:0;background:rgba(0,0,0,.35)}.quick-body{position:relative;background:#fff;border-radius:18px;padding:18px;width:min(430px,100%);border:1px solid #e5e5ea}.quick-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+    @media(max-width:860px){.dashboard{grid-template-columns:1fr}.task-panel{order:-1}.task-list{max-height:none}}
+    @media(max-width:520px){.clock-panel,.task-panel{padding:14px;border-radius:15px}.task-tools{display:grid;grid-template-columns:1fr}.task-tools .btn{width:100%}.task{align-items:flex-start}.quick-actions{display:grid;grid-template-columns:1fr}.quick-actions .btn{width:100%}}
 </style>
 
-<div class="header">Будильники</div>
+<div class="dashboard">
+    <section class="clock-panel">
+        <div class="clock-wrap" onclick="toggleClock()" title="Переключить вид часов">
+            <div class="clock-box">
+                <canvas id="clockCanvas" width="190" height="190"></canvas>
+                <div id="digital"></div>
+            </div>
+        </div>
+        <div class="next" id="nextText"></div>
+        <div class="alarm-list">
+            @forelse($alarms as $alarm)
+                <div class="alarm {{ $alarm->enabled ? '' : 'disabled' }}" onclick="editAlarm({{ $alarm->id }})">
+                    <div class="toggle {{ $alarm->enabled ? 'active' : '' }}" onclick="event.stopPropagation();toggleAlarm(this,{{ $alarm->id }})" role="switch" aria-checked="{{ $alarm->enabled ? 'true' : 'false' }}"></div>
+                    <div><div class="alarm-time">{{ substr($alarm->time, 0, 5) }}</div><div class="alarm-note">{{ $alarm->title }}</div></div>
+                </div>
+            @empty
+                <div class="empty">Будильников пока нет.</div>
+            @endforelse
+        </div>
+    </section>
 
-<div class="clock-wrap" onclick="toggleClock()">
-  <div class="clock-box">
-    <canvas id="clockCanvas" width="160" height="160"></canvas>
-    <div id="digital" style="display:none"></div>
-  </div>
+    <aside class="task-panel">
+        <div class="task-tools">
+            <input id="searchInput" type="search" placeholder="Поиск по задачам">
+            <button class="btn btn-primary" type="button" onclick="openQuickAdd()">+ Задача</button>
+        </div>
+        <div id="categoryChips" class="chips"></div>
+        <div id="taskList" class="task-list"></div>
+        <div class="panel-footer"><span id="taskCount"></span><a href="{{ route('items.index', 'tasks') }}">Открыть раздел</a></div>
+    </aside>
 </div>
 
-<div class="next" id="nextText"></div>
-
-<div>
-@foreach($alarms as $alarm)
-<div class="alarm {{ $alarm->enabled?'':'disabled' }}" data-id="{{ $alarm->id }}" onclick="edit({{ $alarm->id }})">
-  <div>
-    <div class="time">{{ substr($alarm->time,0,5) }}</div>
-    <div style="color:#8e8e93;">
-    {{ $alarm->title }}
-    @php
-        $days = $alarm->weekdays ?? [1,1,1,1,1,1,1];
-        $names = ['пн','вт','ср','чт','пт','сб','вс'];
-
-        $active = [];
-        foreach ($days as $i => $d) {
-            if ($d) $active[] = $names[$i];
-        }
-    @endphp
-
-    @if(count($active) === 7)
-        , Каждый день
-    @elseif(count($active) > 0)
-        , {{ implode(' ', $active) }}
-    @endif
+<div id="quickModal" class="quick-modal" role="dialog" aria-modal="true" aria-labelledby="quickTitleLabel">
+    <div class="quick-overlay" onclick="closeQuickAdd()"></div>
+    <div class="quick-body">
+        <h2 id="quickTitleLabel" style="margin:0 0 15px">Новая задача</h2>
+        <div class="field"><label for="quickTitle">Название</label><input id="quickTitle" maxlength="255" placeholder="Что нужно сделать"></div>
+        <div class="field"><label for="quickCategory">Категория</label><input id="quickCategory" maxlength="100" value="Общие" placeholder="Например: Работа"></div>
+        <div class="quick-actions"><button class="btn" type="button" onclick="closeQuickAdd()">Отмена</button><button class="btn btn-primary" type="button" id="quickSave" onclick="quickAdd()">Сохранить</button></div>
+    </div>
 </div>
-  </div>
-  <div class="toggle {{ $alarm->enabled?'active':'' }}" onclick="event.stopPropagation();toggle(this,{{ $alarm->id }})"></div>
-</div>
-@endforeach
-</div>
-
-<a href="/alarms/create" class="add-btn">+</a>
 
 <script>
-let digital=false;
-let alarms=@json($alarms);
-const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-const toggleUrlTemplate = @json(route('alarms.toggle-enabled', ['alarm' => '__ALARM_ID__']));
+let digital = false;
+let alarms = @json($alarms);
+let tasks = @json($tasks);
+let selectedCategory = 'Все';
+const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+const taskStoreUrl = @json(route('items.store', 'tasks'));
+const taskImportUrl = @json(route('items.import-local'));
+const taskEditUrl = @json(route('items.edit', ['section' => 'tasks', 'item' => '__ITEM_ID__']));
+const taskDeleteUrl = @json(route('items.destroy', ['section' => 'tasks', 'item' => '__ITEM_ID__']));
+const alarmToggleUrl = @json(route('alarms.toggle-enabled', ['alarm' => '__ALARM_ID__']));
 
-function toggleClock(){
-  digital=!digital;
-  document.getElementById('clockCanvas').style.display=digital?'none':'block';
-  document.getElementById('digital').style.display=digital?'flex':'none';
+const escapeHtml = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
+const categories = () => ['Все', ...new Set(tasks.map(task => task.category || 'Общие'))];
+const filteredTasks = () => {
+    const query = document.getElementById('searchInput').value.trim().toLowerCase();
+    return tasks.filter(task => selectedCategory === 'Все' || (task.category || 'Общие') === selectedCategory)
+        .filter(task => !query || `${task.title || ''} ${task.content || ''} ${task.category || ''}`.toLowerCase().includes(query));
+};
+
+function renderTasks(){
+    const data = filteredTasks();
+    document.getElementById('categoryChips').innerHTML = categories().map(category => `<button class="chip ${category === selectedCategory ? 'active' : ''}" type="button" data-category="${escapeHtml(category)}">${escapeHtml(category)}</button>`).join('');
+    document.querySelectorAll('[data-category]').forEach(button => button.onclick = () => { selectedCategory = button.dataset.category; renderTasks(); });
+    document.getElementById('taskList').innerHTML = data.length ? data.map(task => `
+        <div class="task">
+            <div class="task-main"><div class="task-title">${escapeHtml(task.title)}</div><div class="task-meta">${escapeHtml(task.category || 'Общие')} · ${new Date(task.updated_at || task.created_at).toLocaleString('ru-RU')}</div></div>
+            <div class="task-actions"><a class="icon-btn" href="${taskEditUrl.replace('__ITEM_ID__', task.id)}" aria-label="Изменить">✎</a><button class="icon-btn danger" type="button" onclick="removeTask(${Number(task.id)})" aria-label="Удалить">×</button></div>
+        </div>`).join('') : '<div class="empty">Задач не найдено.</div>';
+    document.getElementById('taskCount').textContent = `Показано: ${data.length}`;
 }
 
+document.getElementById('searchInput').addEventListener('input', renderTasks);
+renderTasks();
+
+function openQuickAdd(){ document.getElementById('quickTitle').value=''; document.getElementById('quickCategory').value='Общие'; document.getElementById('quickModal').style.display='flex'; setTimeout(() => document.getElementById('quickTitle').focus(), 0); }
+function closeQuickAdd(){ document.getElementById('quickModal').style.display='none'; }
+async function quickAdd(){
+    const title = document.getElementById('quickTitle').value.trim();
+    if (!title) return document.getElementById('quickTitle').focus();
+    const button = document.getElementById('quickSave'); button.disabled = true;
+    try {
+        const response = await fetch(taskStoreUrl, {method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':csrfToken},body:JSON.stringify({title,category:document.getElementById('quickCategory').value.trim() || 'Общие'})});
+        if (!response.ok) throw new Error('Не удалось сохранить задачу');
+        const data = await response.json(); tasks.unshift(data.item); closeQuickAdd(); renderTasks();
+    } catch (error) { alert(error.message); } finally { button.disabled = false; }
+}
+async function removeTask(id){
+    if (!confirm('Удалить задачу?')) return;
+    try {
+        const response = await fetch(taskDeleteUrl.replace('__ITEM_ID__', id), {method:'DELETE',headers:{'Accept':'application/json','X-CSRF-TOKEN':csrfToken}});
+        if (!response.ok) throw new Error('Не удалось удалить задачу');
+        tasks = tasks.filter(task => Number(task.id) !== Number(id)); renderTasks();
+    } catch (error) { alert(error.message); }
+}
+
+async function importLocalTasks(){
+    const key = 'side_tasks_v1';
+    let localTasks = [];
+    try { localTasks = JSON.parse(localStorage.getItem(key) || '[]'); } catch (_) {}
+    if (!Array.isArray(localTasks) || !localTasks.length) return;
+    try {
+        const response = await fetch(taskImportUrl, {method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':csrfToken},body:JSON.stringify({tasks:localTasks})});
+        if (!response.ok) return;
+        localStorage.removeItem(key); window.location.reload();
+    } catch (_) {}
+}
+importLocalTasks();
+
+async function toggleAlarm(element, id){
+    const oldState = element.classList.contains('active');
+    const newState = !oldState;
+    element.classList.toggle('active', newState); element.closest('.alarm').classList.toggle('disabled', !newState); element.setAttribute('aria-checked', String(newState));
+    alarms = alarms.map(alarm => Number(alarm.id) === Number(id) ? {...alarm, enabled:newState} : alarm); computeNextText();
+    try {
+        const response = await fetch(alarmToggleUrl.replace('__ALARM_ID__', id), {method:'PATCH',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':csrfToken},body:JSON.stringify({enabled:newState})});
+        if (!response.ok) throw new Error();
+    } catch (_) { element.classList.toggle('active', oldState); element.closest('.alarm').classList.toggle('disabled', !oldState); element.setAttribute('aria-checked', String(oldState)); alarms = alarms.map(alarm => Number(alarm.id) === Number(id) ? {...alarm, enabled:oldState} : alarm); computeNextText(); }
+}
+function editAlarm(id){ window.location = `/alarms/${id}/edit`; }
+function toggleClock(){ digital=!digital; document.getElementById('clockCanvas').style.display=digital?'none':'block'; document.getElementById('digital').style.display=digital?'flex':'none'; }
+function nowInTimezone(){ return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Novosibirsk'})); }
 function drawClock(){
-  const canvas=document.getElementById('clockCanvas');
-  const ctx=canvas.getContext('2d');
-  const now = getNowInAlarmTimezone();
-  ctx.clearRect(0,0,160,160);
-
-  let grad=ctx.createRadialGradient(80,80,60,80,80,80);
-  grad.addColorStop(0,'#ffffff');
-  grad.addColorStop(1,'#ddd');
-  ctx.fillStyle=grad;
-  ctx.beginPath();ctx.arc(80,80,75,0,Math.PI*2);ctx.fill();
-
-  for(let i=0;i<60;i++){
-    let a=i*Math.PI/30;
-    ctx.beginPath();
-    ctx.moveTo(80+65*Math.cos(a),80+65*Math.sin(a));
-    ctx.lineTo(80+75*Math.cos(a),80+75*Math.sin(a));
-    ctx.strokeStyle='#aaa';ctx.stroke();
-  }
-
-  ctx.font='12px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
-  for(let i=1;i<=12;i++){
-    let a=(i-3)*Math.PI/6;
-    ctx.fillStyle='#333';
-    ctx.fillText(i,80+55*Math.cos(a),80+55*Math.sin(a));
-  }
-
-  let sec=now.getSeconds(), min=now.getMinutes(), hr=now.getHours()%12;
-  let hA = (hr + min / 60 - 3) * Math.PI / 6;
-  ctx.beginPath();ctx.moveTo(80,80);
-  ctx.lineTo(80+35*Math.cos(hA),80+35*Math.sin(hA));
-  ctx.lineWidth=4;ctx.strokeStyle='#444';ctx.stroke();
-
-  let mA = (min - 15) * Math.PI / 30;
-  ctx.beginPath();ctx.moveTo(80,80);
-  ctx.lineTo(80+50*Math.cos(mA),80+50*Math.sin(mA));
-  ctx.lineWidth=3;ctx.strokeStyle='#666';ctx.stroke();
-
-  let sA = (sec - 15) * Math.PI / 30;
-  ctx.beginPath();ctx.moveTo(80,80);
-  ctx.lineTo(80+65*Math.cos(sA),80+65*Math.sin(sA));
-  ctx.strokeStyle='#ff3b30';ctx.lineWidth=2;ctx.stroke();
-
-  ctx.beginPath();ctx.arc(80,80,5,0,Math.PI*2);ctx.fillStyle='#000';ctx.fill();
-
-  document.getElementById('digital').innerText =
-  now.toLocaleTimeString('ru-RU');
+    const canvas=document.getElementById('clockCanvas'),ctx=canvas.getContext('2d'),now=nowInTimezone(); ctx.clearRect(0,0,190,190);
+    const grad=ctx.createRadialGradient(95,95,70,95,95,95); grad.addColorStop(0,'#fff');grad.addColorStop(1,'#ddd');ctx.fillStyle=grad;ctx.beginPath();ctx.arc(95,95,88,0,Math.PI*2);ctx.fill();
+    for(let i=0;i<60;i++){const a=i*Math.PI/30;ctx.beginPath();ctx.moveTo(95+76*Math.cos(a),95+76*Math.sin(a));ctx.lineTo(95+86*Math.cos(a),95+86*Math.sin(a));ctx.lineWidth=i%5===0?2:1;ctx.strokeStyle='#aaa';ctx.stroke();}
+    ctx.font='13px Arial';ctx.textAlign='center';ctx.textBaseline='middle';for(let i=1;i<=12;i++){const a=(i-3)*Math.PI/6;ctx.fillStyle='#333';ctx.fillText(i,95+62*Math.cos(a),95+62*Math.sin(a));}
+    const hand=(angle,length,width,color)=>{ctx.beginPath();ctx.moveTo(95,95);ctx.lineTo(95+length*Math.cos(angle),95+length*Math.sin(angle));ctx.lineWidth=width;ctx.strokeStyle=color;ctx.stroke();};
+    hand((now.getHours()%12+now.getMinutes()/60-3)*Math.PI/6,40,4,'#444');hand((now.getMinutes()-15)*Math.PI/30,58,3,'#666');hand((now.getSeconds()-15)*Math.PI/30,72,2,'#ff3b30');ctx.beginPath();ctx.arc(95,95,5,0,Math.PI*2);ctx.fillStyle='#000';ctx.fill();
+    document.getElementById('digital').textContent=now.toLocaleTimeString('ru-RU');
 }
-setInterval(drawClock,1000);drawClock();
-
-function getNowInAlarmTimezone() {
-  return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Novosibirsk' }));
+function nextAlarmDiff(alarm, now){
+    if (!alarm.enabled) return null; const [hour,minute]=alarm.time.split(':').map(Number); const days=Array.isArray(alarm.weekdays)?alarm.weekdays:[1,1,1,1,1,1,1]; let best=null;
+    for(let shift=0;shift<7;shift++){const candidate=new Date(now);candidate.setDate(candidate.getDate()+shift);candidate.setHours(hour,minute,0,0);const weekday=(candidate.getDay()+6)%7;if(!days[weekday])continue;const diff=candidate-now;if(diff>=0&&(best===null||diff<best))best=diff;} return best;
 }
-
-function getWeekdayIndexMondayFirst(date) {
-  return (date.getDay() + 6) % 7; // JS: 0=Sun ... 6=Sat => 0=Mon ... 6=Sun
-}
-
-function getNextAlarmDiffMs(alarm, now) {
-  if (!alarm.enabled) return null;
-
-  const [h, m] = alarm.time.split(':').map(Number);
-  const days = Array.isArray(alarm.weekdays) ? alarm.weekdays : [1,1,1,1,1,1,1];
-  const hasActiveDays = days.some(Boolean);
-
-  if (!hasActiveDays) return null;
-
-  let bestDiff = null;
-
-  for (let shift = 0; shift < 7; shift++) {
-    const candidate = new Date(now);
-    candidate.setDate(candidate.getDate() + shift);
-    candidate.setHours(h, m, 0, 0);
-
-    const weekday = getWeekdayIndexMondayFirst(candidate);
-    if (!days[weekday]) continue;
-
-    const diff = candidate - now;
-    if (diff >= 0 && (bestDiff === null || diff < bestDiff)) {
-      bestDiff = diff;
-    }
-  }
-
-  return bestDiff;
-}
-
 function computeNextText(){
-  const now = getNowInAlarmTimezone();
-  let minDiff=null;
-
-  alarms.forEach(a=>{
-    const diff = getNextAlarmDiffMs(a, now);
-    if(diff===null) return;
-    if(minDiff===null || diff<minDiff) minDiff=diff;
-  });
-
-  const el=document.getElementById('nextText');
-  if(minDiff===null){
-    el.innerText='Нет включенных будильников';
-    return;
-  }
-
-  let sec=Math.floor(minDiff/1000);
-  let d=Math.floor(sec/86400); sec%=86400;
-  let h=Math.floor(sec/3600); sec%=3600;
-  let m=Math.floor(sec/60);
-
-  let txt='Сработает через ';
-  if(d) txt+=d+' д ';
-  if(h) txt+=h+' ч ';
-  txt+=m+' мин';
-  el.innerText=txt;
+    const now=nowInTimezone();let min=null;alarms.forEach(alarm=>{const diff=nextAlarmDiff(alarm,now);if(diff!==null&&(min===null||diff<min))min=diff;});const element=document.getElementById('nextText');
+    if(min===null){element.textContent='Нет включённых будильников';return;}let seconds=Math.floor(min/1000),days=Math.floor(seconds/86400);seconds%=86400;let hours=Math.floor(seconds/3600);seconds%=3600;let minutes=Math.floor(seconds/60);element.textContent=`Ближайший сигнал через ${days?days+' д ':''}${hours?hours+' ч ':''}${minutes} мин`;
 }
-
-computeNextText();
-setInterval(computeNextText,60000);
-
-
-
-
-async function toggle(el,id){
-  el.classList.toggle('active');
-  const row=el.closest('.alarm');
-  row.classList.toggle('disabled');
-
-  const isActive = el.classList.contains('active');
-  const previousState = !isActive;
-
-  alarms = alarms.map(a=> a.id===id ? {...a, enabled: isActive} : a);
-
-  computeNextText();
-
-  try{
-    const toggleUrl = toggleUrlTemplate.replace('__ALARM_ID__', String(id));
-    const res = await fetch(toggleUrl, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-        'X-CSRF-TOKEN': csrfToken
-      },
-      body: JSON.stringify({ enabled: isActive ? 1 : 0 })
-    });
-
-    if(!res.ok){
-      throw new Error('toggle request failed');
-    }
-  }catch(err){
-    el.classList.toggle('active', previousState);
-    row.classList.toggle('disabled', !previousState);
-    alarms = alarms.map(a=> a.id===id ? {...a, enabled: previousState} : a);
-    computeNextText();
-    return;
-  }
-
-  if(isActive){
-    const alarm = alarms.find(a => a.id === id);
-    const now = getNowInAlarmTimezone();
-    const diff = getNextAlarmDiffMs(alarm, now);
-    if(diff===null) return;
-
-    let sec = Math.floor(diff / 1000);
-    let d = Math.floor(sec / 86400); sec %= 86400;
-    let h2 = Math.floor(sec / 3600); sec %= 3600;
-    let m2 = Math.floor(sec / 60);
-
-    let text = 'Сработает через ';
-    if(d) text += d + ' д ';
-    if(h2) text += h2 + ' ч ';
-    text += m2 + ' мин';
-
-    const toast = document.createElement('div');
-    toast.innerText = text;
-
-    toast.style = `
-      position:fixed;
-      bottom:20px;
-      left:50%;
-      transform:translateX(-50%);
-      background:#f2f2f7;
-      color:#3c3c43;
-      padding:10px 20px;
-      border-radius:20px;
-      z-index:999;
-      font-size:14px;
-    `;
-
-    document.body.appendChild(toast);
-
-    setTimeout(()=>toast.remove(),3000);
-  }
-}
-
-
-
-
-
-function edit(id){ window.location='/alarms/'+id+'/edit'; }
+drawClock();computeNextText();setInterval(drawClock,1000);setInterval(computeNextText,60000);
 </script>
 @endsection

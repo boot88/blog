@@ -3,19 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Models\Alarm;
+use App\Models\OrganizerItem;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class AlarmController extends Controller
 {
+    private const DEFAULT_ALARM_TIMEZONE = 'Asia/Novosibirsk';
+
     public function index()
     {
         $alarms = Alarm::orderByDesc('enabled')
             ->orderBy('date')
             ->orderBy('time')
             ->get();
+        $tasks = OrganizerItem::forSection('tasks')->latest()->get();
 
-        return view('alarms.index_ios_v6', compact('alarms'));
+        return view('alarms.index_ios_v6', compact('alarms', 'tasks'));
     }
 
     public function create()
@@ -24,11 +28,12 @@ class AlarmController extends Controller
             'title' => 'Новая задача',
             'time' => now()->format('H:i'),
             'enabled' => true,
-            'weekdays' => [1,1,1,1,1,1,1],
+            'weekdays' => [1, 1, 1, 1, 1, 1, 1],
             'sound' => 'alarm.mp3',
             'duration' => 10,
             'snooze_duration' => 10,
             'snooze_repeats' => 3,
+            'timezone' => self::DEFAULT_ALARM_TIMEZONE,
         ]);
 
         return view('alarms.edit_ios_full_v2', compact('alarm'));
@@ -36,31 +41,13 @@ class AlarmController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'title' => ['required','string','max:255'],
-            'note' => ['nullable','string','max:2000'],
-            'date' => ['nullable','date'],      // null = ежедневно
-            'time' => ['required','date_format:H:i'],
-            'enabled' => ['nullable','boolean'],
-           'weekdays' => ['nullable'],
-           'sound' => ['nullable','string'],
-           'duration' => ['nullable','integer'],
-           'snooze_duration' => ['nullable','integer'],
-           'snooze_repeats' => ['nullable','integer'],
-        ]);
-        
-        $data['weekdays'] = $request->filled('weekdays')
-    ? json_decode($request->weekdays, true)
-    : null;
-        
-        
-        
-        $data['enabled'] = (bool)($data['enabled'] ?? false);
-        $data['timezone'] = config('app.timezone');
+        $data = $this->validatedAlarm($request);
+        $data['enabled'] = (bool) ($data['enabled'] ?? false);
+        $data['timezone'] = self::DEFAULT_ALARM_TIMEZONE;
 
         Alarm::create($data);
 
-        return redirect()->route('alarms.index')->with('ok', 'Задача создана.');
+        return redirect()->route('alarms.index')->with('ok', 'Будильник создан.');
     }
 
     public function edit(Alarm $alarm)
@@ -69,118 +56,125 @@ class AlarmController extends Controller
     }
 
     public function update(Request $request, Alarm $alarm)
-{
-    $data = $request->validate([
-        'title' => ['required','string','max:255'],
-        'note' => ['nullable','string','max:2000'],
-        'date' => ['nullable','date'],
-        'time' => ['required','date_format:H:i'],
-        'enabled' => ['nullable','boolean'],
-        'weekdays' => ['nullable'],
-        'sound' => ['nullable','string'],
-        'duration' => ['nullable','integer'],
-        'snooze_duration' => ['nullable','integer'],
-        'snooze_repeats' => ['nullable','integer'],
-        
-    ]);
-    
-    $data['weekdays'] = $request->filled('weekdays')
-    ? json_decode($request->weekdays, true)
-    : null;
-    
-    $data['sound'] = $request->input('sound');
-    
-    $data['duration'] = $request->input('duration', 10);
-    
-    $data['snooze_duration'] = $request->input('snooze_duration', 10);
-    $data['snooze_repeats'] = $request->input('snooze_repeats', 3);
-    
-    $data['enabled'] = array_key_exists('enabled', $data)
-        ? (bool)$data['enabled']
-        : $alarm->enabled;
+    {
+        $data = $this->validatedAlarm($request);
+        $data['enabled'] = array_key_exists('enabled', $data)
+            ? (bool) $data['enabled']
+            : $alarm->enabled;
 
-    $alarm->update($data);
+        $alarm->update($data);
 
-    // 👇 ВАЖНО
-    if ($request->expectsJson()) {
-        return response()->json([
-            'ok' => true,
-            'alarm' => $alarm->fresh(),
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true, 'alarm' => $alarm->fresh()]);
+        }
+
+        return redirect()->route('alarms.index')->with('ok', 'Будильник обновлён.');
     }
 
-    return redirect()->route('alarms.index');
-}
+    public function destroy(Request $request, Alarm $alarm)
+    {
+        $alarm->delete();
 
-    public function destroy(Alarm $alarm)
-{
-    $alarm->delete();
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true]);
+        }
 
-    if (request()->expectsJson()) {
-        return response()->json(['ok' => true]);
+        return redirect()->route('alarms.index')->with('ok', 'Будильник удалён.');
     }
 
-    return redirect()->route('alarms.index')
-        ->with('ok', 'Задача удалена.');
-}
-
-    /**
-     * API-проверка: фронт дергает раз в 1 сек.
-     * Возвращаем список будильников, которые должны сработать "прямо сейчас".
-     */
     public function due(Request $request)
     {
-        $tz = config('app.timezone');
-        $now = Carbon::now($tz);
+        $appNow = Carbon::now(config('app.timezone'));
+        $triggeredAt = Carbon::now('UTC');
 
-        $today = $now->format('Y-m-d');
-        $time = $now->format('H:i');
-
-        // Задачи:
-        // - включены
-        // - либо на сегодня (date = today), либо ежедневные (date is null)
-        // - время = текущее H:i
         $alarms = Alarm::query()
             ->where('enabled', true)
-            ->where('time', $time)
-            ->where(function ($q) use ($today) {
-                $q->whereNull('date')->orWhere('date', $today);
-            })
-            ->get();
+            ->get()
+            ->filter(function (Alarm $alarm) {
+                $alarmTimezone = $alarm->timezone;
+                if (!$alarmTimezone || strtoupper($alarmTimezone) === 'UTC') {
+                    $alarmTimezone = self::DEFAULT_ALARM_TIMEZONE;
+                }
+                $alarmNow = Carbon::now($alarmTimezone);
 
-        // Чтобы не “дребезжало” при обновлениях — отметим last_triggered_at (раз в минуту)
+                // MySQL returns TIME as HH:MM:SS, while the form submits HH:MM.
+                if (substr((string) $alarm->time, 0, 5) !== $alarmNow->format('H:i')) {
+                    return false;
+                }
+                if ($alarm->date && $alarm->date->format('Y-m-d') !== $alarmNow->format('Y-m-d')) {
+                    return false;
+                }
+
+                $weekdays = is_array($alarm->weekdays) ? $alarm->weekdays : [1, 1, 1, 1, 1, 1, 1];
+                if (count($weekdays) === 7 && empty($weekdays[$alarmNow->isoWeekday() - 1])) {
+                    return false;
+                }
+
+                if ($alarm->last_triggered_at) {
+                    $last = $alarm->last_triggered_at->copy()->timezone($alarmTimezone);
+                    if ($last->format('Y-m-d H:i') === $alarmNow->format('Y-m-d H:i')) {
+                        return false;
+                    }
+                }
+
+                return true;
+            })
+            ->values();
+
         foreach ($alarms as $alarm) {
-            $alarm->last_triggered_at = $now;
-            $alarm->save();
+            $alarm->update(['last_triggered_at' => $triggeredAt]);
         }
 
         return response()->json([
-            'now' => $now->toIso8601String(),
-            'alarms' => $alarms->map(fn($a) => [
-                'id' => $a->id,
-                'title' => $a->title,
-                'note' => $a->note,
-                'date' => $a->date?->format('Y-m-d'),
-                'time' => $a->time,
-            ])->values(),
+            'now' => $appNow->toIso8601String(),
+            'alarms' => $alarms->map(fn (Alarm $alarm) => [
+                'id' => $alarm->id,
+                'title' => $alarm->title,
+                'note' => $alarm->note,
+                'date' => $alarm->date?->format('Y-m-d'),
+                'time' => substr((string) $alarm->time, 0, 5),
+                'sound' => $alarm->sound ?: 'alarm.mp3',
+                'duration' => (int) ($alarm->duration ?: 10),
+                'snooze_duration' => (int) ($alarm->snooze_duration ?: 10),
+                'snooze_repeats' => (int) ($alarm->snooze_repeats ?: 0),
+            ]),
         ]);
     }
 
     public function toggleEnabled(Request $request, Alarm $alarm)
     {
-        $data = $request->validate([
-            'enabled' => ['required', 'boolean'],
-        ]);
-
-        $alarm->enabled = (bool) $data['enabled'];
-        $alarm->save();
+        $data = $request->validate(['enabled' => ['required', 'boolean']]);
+        $alarm->update(['enabled' => (bool) $data['enabled']]);
 
         return response()->json([
             'ok' => true,
-            'alarm' => [
-                'id' => $alarm->id,
-                'enabled' => (bool) $alarm->enabled,
-            ],
+            'alarm' => ['id' => $alarm->id, 'enabled' => (bool) $alarm->enabled],
         ]);
+    }
+
+    private function validatedAlarm(Request $request): array
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'note' => ['nullable', 'string', 'max:2000'],
+            'date' => ['nullable', 'date'],
+            'time' => ['required', 'date_format:H:i'],
+            'enabled' => ['nullable', 'boolean'],
+            'weekdays' => ['nullable'],
+            'sound' => ['nullable', 'string', 'max:100'],
+            'duration' => ['nullable', 'integer', 'min:1', 'max:120'],
+            'snooze_duration' => ['nullable', 'integer', 'min:1', 'max:1440'],
+            'snooze_repeats' => ['nullable', 'integer', 'min:0', 'max:20'],
+        ]);
+
+        $data['weekdays'] = $request->filled('weekdays')
+            ? json_decode((string) $request->input('weekdays'), true)
+            : null;
+        $data['sound'] = $data['sound'] ?? 'alarm.mp3';
+        $data['duration'] = $data['duration'] ?? 10;
+        $data['snooze_duration'] = $data['snooze_duration'] ?? 10;
+        $data['snooze_repeats'] = $data['snooze_repeats'] ?? 3;
+
+        return $data;
     }
 }
